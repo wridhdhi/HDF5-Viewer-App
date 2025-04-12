@@ -4,20 +4,32 @@ import { Dataset } from '../types';
 interface DatasetListProps {
   datasets: Record<string, Dataset>;
   onSelectDataset: (dataset: Dataset) => void;
+  filterDimensions?: number; // New prop to filter datasets by minimum dimensions
 }
 
-const DatasetList: React.FC<DatasetListProps> = ({ datasets, onSelectDataset }) => {
+const DatasetList: React.FC<DatasetListProps> = ({ 
+  datasets, 
+  onSelectDataset,
+  filterDimensions 
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  // Filter datasets that have at least 2D shape
+  // Filter datasets based on search query and dimensions
   const filteredDatasets = Object.values(datasets).filter(dataset => {
+    // Filter by search term
     const matchesSearch = dataset.path.toLowerCase().includes(searchQuery.toLowerCase());
-    const isMultiDimensional = dataset.type === 'dataset' && 
-                              dataset.shape && 
-                              (dataset.shape.length >= 2 || 
-                               (dataset.shape.length === 1 && dataset.shape[0] > 1));
-    return matchesSearch && isMultiDimensional;
+    
+    // Filter by dataset type
+    const isDataset = dataset.type === 'dataset';
+    
+    // Filter by dimensions if filterDimensions is specified
+    let hasSufficientDimensions = true;
+    if (filterDimensions !== undefined && dataset.shape) {
+      hasSufficientDimensions = dataset.shape.length >= filterDimensions;
+    }
+    
+    return matchesSearch && isDataset && hasSufficientDimensions;
   });
 
   const toggleGroup = (groupPath: string) => {
@@ -50,9 +62,18 @@ const DatasetList: React.FC<DatasetListProps> = ({ datasets, onSelectDataset }) 
     }
   });
 
+  // Get the filter text to display based on active filter
+  const getFilterText = () => {
+    if (filterDimensions !== undefined) {
+      return `Showing datasets with ${filterDimensions}+ dimensions`;
+    }
+    return "Showing all datasets";
+  };
+
   return (
     <div className="dataset-list">
       <h2>Available Datasets</h2>
+      <div className="filter-info">{getFilterText()}</div>
       <input
         type="text"
         placeholder="Search datasets..."
@@ -62,7 +83,7 @@ const DatasetList: React.FC<DatasetListProps> = ({ datasets, onSelectDataset }) 
       />
       
       {Object.keys(groupedDatasets).length === 0 && (
-        <p>No multi-dimensional datasets found in this file.</p>
+        <p>No matching datasets found in this file.</p>
       )}
       
       {Object.entries(groupedDatasets).map(([groupPath, groupDatasets]) => (

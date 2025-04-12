@@ -11,6 +11,8 @@ export interface HDF5File {
   structure: Record<string, Dataset>;
 }
 
+export type PlotType = 'heatmap' | 'scatter' | 'line' | 'line+marker';
+
 export interface PlotSettings {
   xAxis: number;
   yAxis: number;
@@ -18,4 +20,15 @@ export interface PlotSettings {
   colorscale: string;
   xTicksDataset: string;
   yTicksDataset: string;
+  // For 1D plots
+  plotType: PlotType;
+  xDataset: string; // Dataset path for x-values (optional)
+}
+
+export interface Series1DSettings {
+  seriesPath: string; // Dataset path for the series data
+  xDataset: string; // Optional dataset for x values
+  plotType: PlotType;
+  color: string;
+  name: string;
 }

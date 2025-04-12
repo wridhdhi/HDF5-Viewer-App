@@ -1,8 +1,9 @@
 #root {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: left;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem;
+  text-align: center;
+  width: 100%;
 }
 
 body {
@@ -24,26 +25,29 @@ body {
 
 .app-container {
   display: flex;
-  flex-direction: row;
   gap: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+  text-align: left;
 }
 
 .sidebar {
   flex: 0 0 300px;
-  border-right: 1px solid #ddd;
-  padding-right: 20px;
+  padding: 15px;
+  background-color: #f7f7f7;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .main-content {
   flex: 1;
-  min-height: 600px;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* FileUploader Component */
 .file-uploader {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 5px;
@@ -57,6 +61,7 @@ body {
 }
 
 .file-uploader input[type="file"] {
+  margin-top: 10px;
   width: 100%;
   padding: 10px;
   border: 1px dashed #ccc;
@@ -71,6 +76,8 @@ body {
   border-radius: 5px;
   background-color: white;
   overflow: hidden;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 .dataset-list h2 {
@@ -82,24 +89,27 @@ body {
 }
 
 .search-input {
-  width: calc(100% - 30px);
-  margin: 15px;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
   border: 1px solid #ddd;
   border-radius: 4px;
 }
 
 .dataset-group {
+  margin-bottom: 8px;
   border-bottom: 1px solid #eee;
 }
 
 .group-header {
-  padding: 10px 15px;
-  cursor: pointer;
-  background-color: #f9f9f9;
-  font-weight: 500;
   display: flex;
   align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  background-color: #eee;
+  border-radius: 4px;
+  user-select: none;
+  font-weight: 500;
 }
 
 .group-header:hover {
@@ -107,24 +117,30 @@ body {
 }
 
 .group-toggle {
-  margin-right: 10px;
+  margin-right: 8px;
   font-size: 10px;
+}
+
+.group-name {
+  font-weight: 500;
 }
 
 .dataset-items {
   list-style: none;
-  padding: 0;
-  margin: 0;
+  padding-left: 15px;
+  margin: 5px 0;
 }
 
 .dataset-item {
-  padding: 12px 15px 12px 25px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 6px 8px;
+  margin: 4px 0;
+  border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .dataset-item:hover {
-  background-color: #f5f7fa;
+  background-color: #f0f0f0;
 }
 
 .dataset-item:last-child {
@@ -137,12 +153,14 @@ body {
 }
 
 .dataset-info {
-  font-size: 0.85rem;
+  font-size: 0.85em;
   color: #666;
+  margin-top: 2px;
 }
 
 /* HeatmapPlot Component */
-.heatmap-plot {
+.heatmap-plot, .series-plot {
+  width: 100%;
   padding: 20px;
   border: 1px solid #ddd;
   border-radius: 5px;
@@ -156,28 +174,32 @@ body {
 }
 
 .plot-controls {
+  margin-bottom: 20px;
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-  margin-bottom: 20px;
   padding: 15px;
   background-color: #f5f5f5;
   border-radius: 5px;
 }
 
 .control-group {
+  margin-bottom: 10px;
   display: flex;
   flex-direction: column;
 }
 
 .control-group label {
+  display: block;
   margin-bottom: 5px;
   font-weight: 500;
   font-size: 0.9rem;
 }
 
-.control-group select {
-  padding: 8px 12px;
+.control-group select,
+.control-group input[type="range"] {
+  width: 100%;
+  padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background-color: white;
@@ -185,10 +207,12 @@ body {
 }
 
 .slice-controls {
+  margin-top: 20px;
   margin-bottom: 20px;
   padding: 15px;
+  background-color: #f7f7f7;
+  border-radius: 4px;
   border: 1px solid #eee;
-  border-radius: 5px;
 }
 
 .slice-controls h3 {
@@ -210,6 +234,7 @@ body {
 }
 
 .slice-slider label {
+  min-width: 150px;
   flex: 0 0 150px;
   font-size: 0.9rem;
 }
@@ -219,6 +244,8 @@ body {
 }
 
 .slice-slider span {
+  min-width: 30px;
+  text-align: right;
   width: 30px;
   text-align: center;
 }
@@ -248,6 +275,239 @@ body {
 }
 
 .error {
-  color: #e74c3c;
+  color: #d32f2f;
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #ffebee;
+  border-radius: 4px;
   font-weight: 500;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 15px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  color: #000;
+}
+
+.tab-button.active {
+  color: #0066cc;
+  border-bottom-color: #0066cc;
+  font-weight: 500;
+}
+
+/* 1D Series Plot Specific Styles */
+.series-controls {
+  flex: 2;
+  padding: 15px;
+  background-color: #f7f7f7;
+  border-radius: 4px;
+}
+
+.heatmap-slice-controls {
+  flex: 1;
+  padding: 15px;
+  background-color: #f7f7f7;
+  border-radius: 4px;
+}
+
+.series-config {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.series-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.series-form .form-group {
+  flex: 1 0 200px;
+}
+
+.add-series-btn, .add-slice-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 15px;
+  transition: background-color 0.2s;
+}
+
+.add-series-btn:hover, .add-slice-btn:hover {
+  background-color: #388e3c;
+}
+
+.remove-series-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s;
+}
+
+.remove-series-btn:hover {
+  background-color: #d32f2f;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Plot Type Selector */
+.plot-type-selector {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.plot-type-selector h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.plot-type-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.plot-type-button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plot-type-button.active {
+  background-color: #0066cc;
+  color: white;
+  border-color: #0055aa;
+}
+
+.plot-type-button:hover:not(.active) {
+  background-color: #f5f5f5;
+  border-color: #999;
+}
+
+/* Filter information */
+.filter-info {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 10px;
+  padding: 5px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  text-align: center;
+}
+
+/* N-Dimensional Dataset Slice Controls */
+.ndim-slice-controls {
+  flex: 1;
+  padding: 15px;
+  background-color: #e9f7fe;
+  border-radius: 6px;
+  border: 1px solid #c0e3f2;
+  margin-bottom: 20px;
+}
+
+.ndim-slice-controls h3 {
+  margin-top: 0;
+  color: #0066a1;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+
+.ndim-slice-controls h4 {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.other-dimensions {
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.dimension-slice {
+  margin-bottom: 10px;
+}
+
+.dimension-slice label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.slice-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slice-input input[type="range"] {
+  flex: 1;
+}
+
+.slice-input span {
+  min-width: 40px;
+  text-align: center;
+  font-family: monospace;
+  background: #eee;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.add-ndim-slice-btn {
+  background-color: #0066a1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-ndim-slice-btn:hover {
+  background-color: #004d7a;
 }

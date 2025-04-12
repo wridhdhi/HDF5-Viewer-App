@@ -658,4 +658,78 @@ def get_heatmap_data(
         logger.error(f"Error in get_heatmap_data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/slice_1d")
+def get_slice_1d(
+    file: str,
+    path: str,
+    direction: str = Query(..., description="Slice direction: 'row' or 'column'"),
+    index: int = Query(..., description="Index of the row or column to extract")
+):
+    """Get a 1D slice (row or column) from a 2D dataset."""
+    try:
+        logger.info(f"Extracting 1D slice from file: {file}, path: {path}, direction: {direction}, index: {index}")
+        
+        if not os.path.exists(file):
+            raise HTTPException(status_code=404, detail=f"File not found: {file}")
+        
+        with h5py.File(file, 'r') as f:
+            if path not in f:
+                raise HTTPException(status_code=404, detail=f"Dataset path not found: {path}")
+            
+            dataset = f[path]
+            
+            # Validate dimensions
+            if not isinstance(dataset, h5py.Dataset):
+                raise HTTPException(status_code=400, detail=f"Path does not refer to a dataset: {path}")
+            
+            shape = list(dataset.shape)
+            
+            if len(shape) != 2:
+                raise HTTPException(status_code=400, detail=f"Dataset must be 2D for slicing, found shape: {shape}")
+            
+            # Extract the slice based on direction
+            if direction == 'row':
+                if index >= shape[0]:
+                    raise HTTPException(status_code=400, detail=f"Row index {index} out of bounds (max: {shape[0]-1})")
+                
+                # Extract the row
+                slice_data = dataset[index, :]
+                
+                # Generate x values (column indices)
+                x_data = list(range(shape[1]))
+            
+            elif direction == 'column':
+                if index >= shape[1]:
+                    raise HTTPException(status_code=400, detail=f"Column index {index} out of bounds (max: {shape[1]-1})")
+                
+                # Extract the column
+                slice_data = dataset[:, index]
+                
+                # Generate x values (row indices)
+                x_data = list(range(shape[0]))
+            
+            else:
+                raise HTTPException(status_code=400, detail=f"Invalid slice direction. Must be 'row' or 'column'")
+            
+            # Prepare response
+            result = {
+                "data": {
+                    "x_data": x_data,
+                    "y_data": slice_data.tolist() if isinstance(slice_data, np.ndarray) else slice_data,
+                    "datasetInfo": {
+                        "path": path,
+                        "shape": shape,
+                        "direction": direction,
+                        "index": index
+                    }
+                }
+            }
+            
+            logger.info(f"Successfully extracted 1D slice with {len(x_data)} points")
+            return JSONResponse(content=json.loads(json.dumps(result, cls=NumpyEncoder)))
+    
+    except Exception as e:
+        logger.error(f"Error in get_slice_1d: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
