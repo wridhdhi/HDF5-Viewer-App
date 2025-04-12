@@ -37,7 +37,8 @@ const HomePage: React.FC = () => {
           {selectedDataset && file ? (
             <HeatmapPlot 
               filePath={file.path} 
-              dataset={selectedDataset} 
+              dataset={selectedDataset}
+              allDatasets={file.structure}
             />
           ) : (
             <div className="no-dataset-selected">

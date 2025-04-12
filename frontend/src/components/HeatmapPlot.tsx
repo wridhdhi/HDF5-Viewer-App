@@ -5,9 +5,10 @@ import { Dataset, PlotSettings } from '../types';
 interface HeatmapPlotProps {
   filePath: string;
   dataset: Dataset;
+  allDatasets: Record<string, Dataset>;
 }
 
-const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
+const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDatasets }) => {
   const [plotData, setPlotData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,14 +16,45 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
     xAxis: 0,
     yAxis: 1,
     slices: {},
-    colorscale: 'Viridis'
+    colorscale: 'Viridis',
+    xTicksDataset: '',
+    yTicksDataset: ''
   });
+  const [compatibleXDatasets, setCompatibleXDatasets] = useState<Dataset[]>([]);
+  const [compatibleYDatasets, setCompatibleYDatasets] = useState<Dataset[]>([]);
 
   // Available colorscales in Plotly
   const colorscales = [
     'Viridis', 'Plasma', 'Inferno', 'Magma', 'Cividis',
     'Jet', 'Hot', 'Cool', 'Greys', 'YlGnBu', 'RdBu', 'Portland'
   ];
+
+  // Find datasets compatible with the current axis dimensions
+  useEffect(() => {
+    if (!dataset || !dataset.shape || !allDatasets) return;
+
+    // For X axis: find 1D datasets with length matching the current X axis dimension
+    const xAxisLength = dataset.shape[plotSettings.xAxis];
+    const matchingXDatasets = Object.values(allDatasets).filter(d => 
+      d.type === 'dataset' && 
+      d.shape && 
+      ((d.shape.length === 1 && d.shape[0] === xAxisLength) ||
+       (d.shape.length === 2 && d.shape[0] === 1 && d.shape[1] === xAxisLength) ||
+       (d.shape.length === 2 && d.shape[1] === 1 && d.shape[0] === xAxisLength))
+    );
+    setCompatibleXDatasets(matchingXDatasets);
+
+    // For Y axis: find 1D datasets with length matching the current Y axis dimension
+    const yAxisLength = dataset.shape[plotSettings.yAxis];
+    const matchingYDatasets = Object.values(allDatasets).filter(d => 
+      d.type === 'dataset' && 
+      d.shape && 
+      ((d.shape.length === 1 && d.shape[0] === yAxisLength) ||
+       (d.shape.length === 2 && d.shape[0] === 1 && d.shape[1] === yAxisLength) ||
+       (d.shape.length === 2 && d.shape[1] === 1 && d.shape[0] === yAxisLength))
+    );
+    setCompatibleYDatasets(matchingYDatasets);
+  }, [dataset, allDatasets, plotSettings.xAxis, plotSettings.yAxis]);
 
   useEffect(() => {
     if (!dataset || !filePath) return;
@@ -52,6 +84,29 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
     fetchDataForHeatmap();
   }, [dataset, filePath, plotSettings]);
 
+  // Helper function to generate evenly spaced tick indices
+  const generateSpacedTicks = (totalPoints: number, maxTicks: number = 10): number[] => {
+    if (totalPoints <= maxTicks) {
+      return Array.from({ length: totalPoints }, (_, i) => i);
+    }
+    
+    // Calculate appropriate step size to get approximately maxTicks
+    const step = Math.ceil(totalPoints / maxTicks);
+    const ticks: number[] = [];
+    
+    // Generate evenly spaced indices
+    for (let i = 0; i < totalPoints; i += step) {
+      ticks.push(i);
+    }
+    
+    // Always include the last point if it's not already included
+    if (ticks[ticks.length - 1] !== totalPoints - 1) {
+      ticks.push(totalPoints - 1);
+    }
+    
+    return ticks;
+  };
+
   const fetchDataForHeatmap = async () => {
     if (!dataset.shape || dataset.shape.length < 2) {
       setError('Dataset must have at least 2 dimensions for heatmap visualization');
@@ -62,9 +117,9 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
     setError(null);
     
     try {
-      // Use the new heatmap_data endpoint
+      // Use the heatmap_data endpoint
       const slicesStr = JSON.stringify(plotSettings.slices);
-      const url = `http://localhost:8000/heatmap_data?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(dataset.path)}&x_axis=${plotSettings.xAxis}&y_axis=${plotSettings.yAxis}&slices_str=${encodeURIComponent(slicesStr)}`;
+      let url = `http://localhost:8000/heatmap_data?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(dataset.path)}&x_axis=${plotSettings.xAxis}&y_axis=${plotSettings.yAxis}&slices_str=${encodeURIComponent(slicesStr)}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -74,10 +129,41 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
       
       const data = await response.json();
       
-      // The backend now sends the complete 2D array formatted for the heatmap
+      // Get custom tick values for X axis if selected
+      let xTickValues: number[] | string[] | null = null;
+      if (plotSettings.xTicksDataset) {
+        try {
+          const xTicksUrl = `http://localhost:8000/dataset?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(plotSettings.xTicksDataset)}`;
+          const xTicksResponse = await fetch(xTicksUrl);
+          if (xTicksResponse.ok) {
+            const xTicksData = await xTicksResponse.json();
+            xTickValues = xTicksData.data.y_data;
+          }
+        } catch (error) {
+          console.error('Error fetching X tick labels:', error);
+        }
+      }
+      
+      // Get custom tick values for Y axis if selected
+      let yTickValues: number[] | string[] | null = null;
+      if (plotSettings.yTicksDataset) {
+        try {
+          const yTicksUrl = `http://localhost:8000/dataset?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(plotSettings.yTicksDataset)}`;
+          const yTicksResponse = await fetch(yTicksUrl);
+          if (yTicksResponse.ok) {
+            const yTicksData = await yTicksResponse.json();
+            yTickValues = yTicksData.data.y_data;
+          }
+        } catch (error) {
+          console.error('Error fetching Y tick labels:', error);
+        }
+      }
+      
+      // The backend sends the complete 2D array formatted for the heatmap
       setPlotData({
-        z: data.heatmap_data,
-        type: 'heatmap',
+        data: data.heatmap_data,
+        xTickValues: xTickValues,
+        yTickValues: yTickValues,
         colorscale: plotSettings.colorscale,
       });
     } catch (err) {
@@ -94,20 +180,36 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
       setPlotSettings(prev => ({
         ...prev,
         xAxis: prev.yAxis,
-        yAxis: value
+        yAxis: value,
+        // Reset tick datasets when axes change
+        xTicksDataset: '',
+        yTicksDataset: ''
       }));
     } else if (value === plotSettings.yAxis && axis === 'xAxis') {
       setPlotSettings(prev => ({
         ...prev,
         yAxis: prev.xAxis,
-        xAxis: value
+        xAxis: value,
+        // Reset tick datasets when axes change
+        xTicksDataset: '',
+        yTicksDataset: ''
       }));
     } else {
       setPlotSettings(prev => ({
         ...prev,
-        [axis]: value
+        [axis]: value,
+        // Reset only the affected axis tick dataset
+        ...(axis === 'xAxis' ? { xTicksDataset: '' } : {}),
+        ...(axis === 'yAxis' ? { yTicksDataset: '' } : {})
       }));
     }
+  };
+
+  const handleTicksDatasetChange = (axis: 'xTicksDataset' | 'yTicksDataset', value: string) => {
+    setPlotSettings(prev => ({
+      ...prev,
+      [axis]: value
+    }));
   };
 
   const handleSliceChange = (dimension: string, value: number) => {
@@ -125,6 +227,18 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
   };
 
   if (!dataset) return null;
+
+  // Generate reasonably spaced tick indices
+  const xTicks = plotData?.xTickValues ? 
+    generateSpacedTicks(plotData.xTickValues.length) : null;
+  const yTicks = plotData?.yTickValues ? 
+    generateSpacedTicks(plotData.yTickValues.length) : null;
+
+  // Prepare tick text values at those indices
+  const xTickText = xTicks && plotData?.xTickValues ? 
+    xTicks.map(i => plotData.xTickValues[i]) : null;
+  const yTickText = yTicks && plotData?.yTickValues ? 
+    yTicks.map(i => plotData.yTickValues[i]) : null;
 
   return (
     <div className="heatmap-plot">
@@ -146,6 +260,21 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
         </div>
         
         <div className="control-group">
+          <label>X Axis Labels:</label>
+          <select
+            value={plotSettings.xTicksDataset}
+            onChange={(e) => handleTicksDatasetChange('xTicksDataset', e.target.value)}
+          >
+            <option value="">Default (indices)</option>
+            {compatibleXDatasets.map(d => (
+              <option key={d.path} value={d.path}>
+                {d.path}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="control-group">
           <label>Y Axis:</label>
           <select 
             value={plotSettings.yAxis}
@@ -154,6 +283,21 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
             {dataset.shape?.map((size, idx) => (
               <option key={`y-${idx}`} value={idx}>
                 Dimension {idx} (size: {size})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="control-group">
+          <label>Y Axis Labels:</label>
+          <select
+            value={plotSettings.yTicksDataset}
+            onChange={(e) => handleTicksDatasetChange('yTicksDataset', e.target.value)}
+          >
+            <option value="">Default (indices)</option>
+            {compatibleYDatasets.map(d => (
+              <option key={d.path} value={d.path}>
+                {d.path}
               </option>
             ))}
           </select>
@@ -206,17 +350,51 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset }) => {
       {plotData && !loading && (
         <div className="plot-container">
           <Plot
-            data={[plotData]}
+            data={[{
+              z: plotData.data,
+              type: 'heatmap',
+              colorscale: plotSettings.colorscale,
+              transpose: true, // Fix the transposition issue
+            }]}
             layout={{
               title: `Heatmap of ${dataset.path}`,
               width: 800,
               height: 600,
               xaxis: {
-                title: `Dimension ${plotSettings.xAxis}`,
+                title: plotSettings.xTicksDataset 
+                  ? `${plotSettings.xTicksDataset}` 
+                  : `Dimension ${plotSettings.xAxis}`,
+                tickmode: xTickText ? 'array' : 'auto',
+                tickvals: xTicks,
+                ticktext: xTickText,
+                automargin: true,
+                nticks: 10,
+                showgrid: true,
+                zeroline: false,
+                showline: true,
+                mirror: 'all',
+                showticklabels: true
               },
               yaxis: {
-                title: `Dimension ${plotSettings.yAxis}`,
+                title: plotSettings.yTicksDataset 
+                  ? `${plotSettings.yTicksDataset}` 
+                  : `Dimension ${plotSettings.yAxis}`,
+                tickmode: yTickText ? 'array' : 'auto',
+                tickvals: yTicks,
+                ticktext: yTickText,
+                automargin: true,
+                nticks: 10,
+                showgrid: true,
+                zeroline: false,
+                showline: true,
+                mirror: 'all',
+                showticklabels: true
               }
+            }}
+            config={{
+              responsive: true,
+              displayModeBar: true,
+              scrollZoom: true
             }}
           />
         </div>

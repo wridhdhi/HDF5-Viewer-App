@@ -16,4 +16,6 @@ export interface PlotSettings {
   yAxis: number;
   slices: Record<string, number>;
   colorscale: string;
+  xTicksDataset: string;
+  yTicksDataset: string;
 }
