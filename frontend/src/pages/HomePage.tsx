@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Paper, Dialog, Fade, Backdrop, Typography } from '@mui/material';
 import AppNavbar from '../components/AppNavbar';
 import PlotTypeSidebar from '../components/PlotTypeSidebar';
@@ -31,6 +31,58 @@ const HomePage: React.FC = () => {
   const [showNDimOptions, setShowNDimOptions] = useState(false);
   const [sliceAxis, setSliceAxis] = useState<number>(0);
   const [sliceSettings, setSliceSettings] = useState<Record<string, number>>({});
+
+  // References to the plot components for saving the plot
+  const heatmapPlotRef = useRef<any>(null);
+  const seriesPlotRef = useRef<any>(null);
+
+  // Function to handle saving the plot as PNG
+  const handleSavePlot = () => {
+    if (selectedDataset) {
+      try {
+        const plotName = selectedDataset.path.split('/').pop() || 'plot';
+        
+        // Create a custom filename
+        const timestamp = new Date().toISOString().replace(/[:T.]/g, '-').slice(0, -5);
+        const filename = `${plotName}_${timestamp}`;
+        
+        // Get the Plotly div element
+        const plotElement = document.querySelector('.js-plotly-plot') as HTMLElement;
+        
+        if (!plotElement) {
+          throw new Error("Plot element not found");
+        }
+        
+        // Access the global Plotly object and use it to download the image
+        if (window.Plotly) {
+          window.Plotly.downloadImage(plotElement, {
+            format: 'png',
+            width: 1200,
+            height: 800,
+            filename: filename
+          });
+          
+          setStatus({
+            message: `Plot saved as ${filename}.png`,
+            type: 'success'
+          });
+        } else {
+          throw new Error("Plotly library not available");
+        }
+      } catch (error) {
+        console.error("Error saving plot:", error);
+        setStatus({
+          message: `Failed to save plot: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          type: 'error'
+        });
+      }
+    } else {
+      setStatus({
+        message: "No dataset selected to save plot",
+        type: 'error'
+      });
+    }
+  };
 
   const handleFileUploaded = (uploadedFile: HDF5File) => {
     setFile(uploadedFile);
@@ -167,7 +219,11 @@ const HomePage: React.FC = () => {
       overflow: 'hidden',
       bgcolor: '#fafafa'
     }}>
-      <AppNavbar onFileUpload={() => setUploadDialogOpen(true)} />
+      <AppNavbar 
+        title="HDF5 Heatmap Viewer" 
+        onFileUpload={() => setUploadDialogOpen(true)} 
+        onSavePlot={selectedDataset ? handleSavePlot : undefined}
+      />
       
       {/* Upload Dialog */}
       <Dialog

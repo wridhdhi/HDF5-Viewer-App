@@ -13,12 +13,20 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoDevIcon from '@mui/icons-material/LogoDev';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
 
 interface AppNavbarProps {
-  title: string;
+  title?: string;
+  onFileUpload?: () => void;
+  onSavePlot?: () => void;
 }
 
-const AppNavbar: React.FC<AppNavbarProps> = ({ title }) => {
+const AppNavbar: React.FC<AppNavbarProps> = ({ 
+  title = "HDF5 Viewer", 
+  onFileUpload,
+  onSavePlot
+}) => {
   return (
     <AppBar 
       position="static" 
@@ -44,6 +52,34 @@ const AppNavbar: React.FC<AppNavbarProps> = ({ title }) => {
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Upload HDF5 File">
+            <Button
+              color="inherit"
+              startIcon={<UploadFileIcon />}
+              onClick={onFileUpload}
+              sx={{ 
+                mr: 1,
+                textTransform: 'none',
+                fontWeight: 'normal',
+                borderRadius: '4px'
+              }}
+            >
+              Upload File
+            </Button>
+          </Tooltip>
+          
+          <Tooltip title="Save Plot as PNG">
+            <IconButton 
+              color="inherit" 
+              size="small"
+              onClick={onSavePlot}
+              sx={{ ml: 1 }}
+              disabled={!onSavePlot}
+            >
+              <SaveAltIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          
           <Tooltip title="Settings">
             <IconButton 
               color="inherit" 
