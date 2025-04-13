@@ -545,12 +545,15 @@ def get_heatmap_data(
     x_axis: Optional[int] = Query(0, description="X axis for the heatmap"),
     y_axis: Optional[int] = Query(1, description="Y axis for the heatmap"),
     slices_str: Optional[str] = Query(None, description="Slice indices for dimensions beyond x and y as JSON string"),
+    x_ticks_dataset: Optional[str] = Query(None, description="Optional dataset to use for X tick values"),
+    y_ticks_dataset: Optional[str] = Query(None, description="Optional dataset to use for Y tick values"),
     max_size: Optional[int] = Query(1000000, description="Maximum number of elements to return to prevent memory issues")
 ):
     """Get 2D data specifically formatted for heatmap visualization."""
     try:
         logger.info(f"Reading heatmap dataset from file: {file}, path: {path}")
         logger.info(f"Parameters: x_axis={x_axis}, y_axis={y_axis}, slices_str={slices_str}")
+        logger.info(f"Tick datasets: x_ticks_dataset={x_ticks_dataset}, y_ticks_dataset={y_ticks_dataset}")
         
         if not os.path.exists(file):
             raise HTTPException(status_code=404, detail=f"File not found: {file}")
@@ -615,19 +618,34 @@ def get_heatmap_data(
             # Read the data with our slice specification
             data = dataset[tuple(slice_spec)]
             
-            # The data may not be in the expected x,y order, so we need to transpose it correctly
-            # Determine which dimensions in the result correspond to x and y
-            # This mapping depends on how numpy handles slicing with both full slices (slice(None)) and single indices
-            axis_order = []
-            for dim in range(ndims):
-                if dim == x_axis or dim == y_axis:
-                    axis_order.append(dim)
+            # IMPORTANT FIX: Always ensure data is oriented with y_axis as rows, x_axis as columns
+            # First, determine which axes in the result correspond to our specified x_axis and y_axis
+            # After slicing, the array may have fewer dimensions than the original
+            # We need to track which dimensions in the result correspond to x and y axes
             
-            # If we need to transpose, ensure x_axis comes first in our output
-            if len(axis_order) == 2:
-                if axis_order[0] == y_axis:
-                    # Transpose needed - x should be first dimension in heatmap
-                    data = np.transpose(data)
+            # Get the positions of x_axis and y_axis in our result array
+            result_axes = []
+            axis_counter = 0
+            for i, dim_slice in enumerate(slice_spec):
+                if isinstance(dim_slice, slice) and dim_slice.start is None and dim_slice.stop is None:  # Full slice
+                    result_axes.append((i, axis_counter))
+                    axis_counter += 1
+            
+            # Find position of x and y in result array
+            x_pos = next((pos for orig, pos in result_axes if orig == x_axis), None)
+            y_pos = next((pos for orig, pos in result_axes if orig == y_axis), None)
+            
+            if x_pos is None or y_pos is None:
+                raise HTTPException(status_code=500, detail="Failed to determine axis positions in result array")
+            
+            # We need the data to be shaped as [y_size, x_size] where rows represent y and columns represent x
+            # If y_pos > x_pos, we need to transpose to get the expected orientation
+            # This is because Plotly's heatmap expects z[row][column] where rows=y, columns=x
+            if y_pos > x_pos:
+                # Transpose the array to get correct orientation
+                data = np.transpose(data)
+                # Swap positions for correct tick array creation
+                x_pos, y_pos = y_pos, x_pos
             
             # Create the result dict with the data and axis information
             result = {
@@ -650,6 +668,63 @@ def get_heatmap_data(
                     "dtype": str(dataset.dtype)
                 }
             }
+            
+            # Process custom tick datasets if provided
+            if x_ticks_dataset:
+                if x_ticks_dataset in f:
+                    x_ticks_data = f[x_ticks_dataset]
+                    if isinstance(x_ticks_data, h5py.Dataset):
+                        x_ticks_shape = x_ticks_data.shape
+                        
+                        # Check if the shape is compatible with x axis
+                        if len(x_ticks_shape) == 1 and x_ticks_shape[0] == shape[x_axis]:
+                            # 1D dataset with matching size
+                            x_ticks_values = x_ticks_data[()].tolist() if isinstance(x_ticks_data[()], np.ndarray) else [x_ticks_data[()]]
+                            result["x_ticks"] = {
+                                "values": x_ticks_values,
+                                "path": x_ticks_dataset
+                            }
+                        elif len(x_ticks_shape) == 2 and (x_ticks_shape[0] == 1 or x_ticks_shape[1] == 1) and max(x_ticks_shape) == shape[x_axis]:
+                            # 2D dataset with one dimension of size 1
+                            x_ticks_values = np.squeeze(x_ticks_data[()]).tolist()
+                            result["x_ticks"] = {
+                                "values": x_ticks_values,
+                                "path": x_ticks_dataset
+                            }
+                        else:
+                            logger.warning(f"X ticks dataset shape {x_ticks_shape} incompatible with x axis size {shape[x_axis]}")
+                    else:
+                        logger.warning(f"X ticks path does not refer to a dataset: {x_ticks_dataset}")
+                else:
+                    logger.warning(f"X ticks dataset not found: {x_ticks_dataset}")
+            
+            if y_ticks_dataset:
+                if y_ticks_dataset in f:
+                    y_ticks_data = f[y_ticks_dataset]
+                    if isinstance(y_ticks_data, h5py.Dataset):
+                        y_ticks_shape = y_ticks_data.shape
+                        
+                        # Check if the shape is compatible with y axis
+                        if len(y_ticks_shape) == 1 and y_ticks_shape[0] == shape[y_axis]:
+                            # 1D dataset with matching size
+                            y_ticks_values = y_ticks_data[()].tolist() if isinstance(y_ticks_data[()], np.ndarray) else [y_ticks_data[()]]
+                            result["y_ticks"] = {
+                                "values": y_ticks_values,
+                                "path": y_ticks_dataset
+                            }
+                        elif len(y_ticks_shape) == 2 and (y_ticks_shape[0] == 1 or y_ticks_shape[1] == 1) and max(y_ticks_shape) == shape[y_axis]:
+                            # 2D dataset with one dimension of size 1
+                            y_ticks_values = np.squeeze(y_ticks_data[()]).tolist()
+                            result["y_ticks"] = {
+                                "values": y_ticks_values,
+                                "path": y_ticks_dataset
+                            }
+                        else:
+                            logger.warning(f"Y ticks dataset shape {y_ticks_shape} incompatible with y axis size {shape[y_axis]}")
+                    else:
+                        logger.warning(f"Y ticks path does not refer to a dataset: {y_ticks_dataset}")
+                else:
+                    logger.warning(f"Y ticks dataset not found: {y_ticks_dataset}")
             
             logger.info(f"Successfully read heatmap data with shape: {data.shape if hasattr(data, 'shape') else 'scalar'}")
             return JSONResponse(content=json.loads(json.dumps(result, cls=NumpyEncoder)))

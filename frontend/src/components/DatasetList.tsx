@@ -1,125 +1,183 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { 
+  List, 
+  ListItem, 
+  ListItemButton, 
+  ListItemText, 
+  ListItemIcon,
+  Paper,
+  Typography,
+  Box,
+  Chip,
+  Divider
+} from '@mui/material';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import FolderIcon from '@mui/icons-material/Folder';
 import { Dataset } from '../types';
 
 interface DatasetListProps {
-  datasets: Record<string, Dataset>;
+  datasets: Record<string, Dataset> | null;
   onSelectDataset: (dataset: Dataset) => void;
-  filterDimensions?: number; // New prop to filter datasets by minimum dimensions
+  filterDimensions?: number;
+  selectedDataset: Dataset | null;
 }
 
 const DatasetList: React.FC<DatasetListProps> = ({ 
   datasets, 
-  onSelectDataset,
-  filterDimensions 
+  onSelectDataset, 
+  filterDimensions,
+  selectedDataset
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  if (!datasets) {
+    return (
+      <Box sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+        <Typography variant="body2">
+          No file loaded. Please upload an HDF5 file.
+        </Typography>
+      </Box>
+    );
+  }
 
-  // Filter datasets based on search query and dimensions
   const filteredDatasets = Object.values(datasets).filter(dataset => {
-    // Filter by search term
-    const matchesSearch = dataset.path.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Filter by dataset type
-    const isDataset = dataset.type === 'dataset';
-    
-    // Filter by dimensions if filterDimensions is specified
-    let hasSufficientDimensions = true;
-    if (filterDimensions !== undefined && dataset.shape) {
-      hasSufficientDimensions = dataset.shape.length >= filterDimensions;
+    if (filterDimensions === undefined) {
+      return true;
     }
-    
-    return matchesSearch && isDataset && hasSufficientDimensions;
+    return dataset.shape && dataset.shape.length >= filterDimensions;
   });
 
-  const toggleGroup = (groupPath: string) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(groupPath)) {
-      newExpanded.delete(groupPath);
-    } else {
-      newExpanded.add(groupPath);
-    }
-    setExpandedGroups(newExpanded);
-  };
+  if (filteredDatasets.length === 0) {
+    return (
+      <Box sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+        <Typography variant="body2">
+          No suitable datasets found in this file.
+          {filterDimensions && (
+            <span> Looking for datasets with {filterDimensions}+ dimensions.</span>
+          )}
+        </Typography>
+      </Box>
+    );
+  }
 
-  // Group datasets by their parent groups
-  const groupedDatasets: Record<string, Dataset[]> = {};
-  
+  // Group datasets by their parent groups for better organization
+  const groupedDatasets: { [key: string]: Dataset[] } = {};
   filteredDatasets.forEach(dataset => {
     const pathParts = dataset.path.split('/');
-    if (pathParts.length > 1) {
-      const groupPath = pathParts.slice(0, -1).join('/');
-      if (!groupedDatasets[groupPath]) {
-        groupedDatasets[groupPath] = [];
-      }
-      groupedDatasets[groupPath].push(dataset);
-    } else {
-      // Root level datasets
-      if (!groupedDatasets['root']) {
-        groupedDatasets['root'] = [];
-      }
-      groupedDatasets['root'].push(dataset);
+    // Skip the empty first part from the split
+    const groupPath = pathParts.slice(0, -1).join('/') || '/';
+    
+    if (!groupedDatasets[groupPath]) {
+      groupedDatasets[groupPath] = [];
     }
+    groupedDatasets[groupPath].push(dataset);
   });
 
-  // Get the filter text to display based on active filter
-  const getFilterText = () => {
-    if (filterDimensions !== undefined) {
-      return `Showing datasets with ${filterDimensions}+ dimensions`;
-    }
-    return "Showing all datasets";
+  const isSelected = (dataset: Dataset) => {
+    return selectedDataset && selectedDataset.path === dataset.path;
   };
 
   return (
-    <div className="dataset-list">
-      <h2>Available Datasets</h2>
-      <div className="filter-info">{getFilterText()}</div>
-      <input
-        type="text"
-        placeholder="Search datasets..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="search-input"
-      />
-      
-      {Object.keys(groupedDatasets).length === 0 && (
-        <p>No matching datasets found in this file.</p>
-      )}
-      
-      {Object.entries(groupedDatasets).map(([groupPath, groupDatasets]) => (
-        <div key={groupPath} className="dataset-group">
-          <div 
-            className="group-header" 
-            onClick={() => toggleGroup(groupPath)}
-          >
-            <span className="group-toggle">
-              {expandedGroups.has(groupPath) ? '▼' : '►'}
-            </span>
-            <span className="group-name">
-              {groupPath === 'root' ? 'Root' : groupPath} ({groupDatasets.length})
-            </span>
-          </div>
+    <List dense disablePadding sx={{ width: '100%' }}>
+      {Object.entries(groupedDatasets).map(([groupPath, datasets], index) => (
+        <React.Fragment key={groupPath}>
+          {index > 0 && <Divider sx={{ my: 1 }} />}
           
-          {expandedGroups.has(groupPath) && (
-            <ul className="dataset-items">
-              {groupDatasets.map(dataset => (
-                <li 
-                  key={dataset.path}
-                  className="dataset-item"
-                  onClick={() => onSelectDataset(dataset)}
-                >
-                  <div className="dataset-name">{dataset.path.split('/').pop()}</div>
-                  <div className="dataset-info">
-                    {dataset.shape ? `Shape: [${dataset.shape.join(', ')}]` : ''}
-                    {dataset.dtype ? ` • Type: ${dataset.dtype}` : ''}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          <ListItem dense disablePadding>
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <FolderIcon color="primary" fontSize="small" />
+            </ListItemIcon>
+            <ListItemText 
+              primary={groupPath === '/' ? 'Root' : groupPath}
+              primaryTypographyProps={{
+                variant: 'body2',
+                fontWeight: 'medium',
+                color: 'primary'
+              }}
+            />
+          </ListItem>
+          
+          {datasets.map(dataset => (
+            <ListItemButton
+              key={dataset.path}
+              selected={isSelected(dataset)}
+              onClick={() => onSelectDataset(dataset)}
+              dense
+              sx={{ 
+                pl: 4,
+                borderRadius: 1,
+                my: 0.5,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.light',
+                  color: 'primary.contrastText',
+                  '&:hover': {
+                    backgroundColor: 'primary.main',
+                  }
+                }
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <TableChartIcon fontSize="small" 
+                  sx={{ 
+                    color: isSelected(dataset) ? 'primary.contrastText' : 'inherit'
+                  }} 
+                />
+              </ListItemIcon>
+              <ListItemText
+                primary={dataset.path.split('/').pop()}
+                secondary={
+                  <Box component="span" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {dataset.shape && (
+                      <Chip 
+                        label={`${dataset.shape.join(' × ')}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ 
+                          height: 20,
+                          '& .MuiChip-label': { 
+                            px: 1,
+                            fontSize: '0.675rem',
+                            color: isSelected(dataset) ? 'primary.contrastText' : 'text.secondary'
+                          },
+                          borderColor: isSelected(dataset) ? 'primary.contrastText' : 'divider'
+                        }}
+                      />
+                    )}
+                    {dataset.dtype && (
+                      <Chip 
+                        label={dataset.dtype}
+                        size="small"
+                        variant="outlined"
+                        sx={{ 
+                          height: 20,
+                          '& .MuiChip-label': { 
+                            px: 1,
+                            fontSize: '0.675rem',
+                            color: isSelected(dataset) ? 'primary.contrastText' : 'text.secondary'
+                          },
+                          borderColor: isSelected(dataset) ? 'primary.contrastText' : 'divider'
+                        }}
+                      />
+                    )}
+                  </Box>
+                }
+                primaryTypographyProps={{
+                  variant: 'body2',
+                  sx: { 
+                    fontWeight: isSelected(dataset) ? 'medium' : 'regular',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }
+                }}
+                secondaryTypographyProps={{
+                  variant: 'body2',
+                  sx: { mt: 0.5 }
+                }}
+              />
+            </ListItemButton>
+          ))}
+        </React.Fragment>
       ))}
-    </div>
+    </List>
   );
 };
 

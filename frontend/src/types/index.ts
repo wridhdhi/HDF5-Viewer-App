@@ -7,11 +7,14 @@ export interface Dataset {
 }
 
 export interface HDF5File {
+  name: string;
   path: string;
+  size: number;
+  lastModified: Date;
   structure: Record<string, Dataset>;
 }
 
-export type PlotType = 'heatmap' | 'scatter' | 'line' | 'line+marker';
+export type PlotType = 'scatter' | 'line' | 'line+marker';
 
 export interface PlotSettings {
   xAxis: number;
@@ -20,9 +23,6 @@ export interface PlotSettings {
   colorscale: string;
   xTicksDataset: string;
   yTicksDataset: string;
-  // For 1D plots
-  plotType: PlotType;
-  xDataset: string; // Dataset path for x-values (optional)
 }
 
 export interface Series1DSettings {
@@ -31,4 +31,14 @@ export interface Series1DSettings {
   plotType: PlotType;
   color: string;
   name: string;
+  // Additional options for N-dimensional slices
+  isNDimSlice?: boolean;
+  sliceAxis?: number;
+  slicesForOtherDimensions?: Record<string, number>;
+  showStatistics?: boolean; // New option to show statistics
+}
+
+export interface StatusMessage {
+  message: string;
+  type: 'info' | 'error' | 'success';
 }

@@ -1,18 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
-import { Dataset, PlotSettings } from '../types';
+import { 
+  Box, 
+  Typography, 
+  FormControl, 
+  InputLabel, 
+  MenuItem, 
+  Select,
+  Slider,
+  CircularProgress, 
+  Paper,
+  styled 
+} from '@mui/material';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import PaletteIcon from '@mui/icons-material/Palette';
+import ViewSlider from '@mui/icons-material/ViewStream';
+import LabelIcon from '@mui/icons-material/Label';
+import { Dataset, PlotSettings, StatusMessage } from '../types';
+import { ControlAccordion } from './PlotControlsSidebar';
+
+const SliderContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: '8px',
+  marginBottom: '8px'
+}));
+
+const SliderLabel = styled(Typography)(({ theme }) => ({
+  width: '100px',
+  fontSize: '14px'
+}));
+
+const SliderValue = styled(Typography)(({ theme }) => ({
+  width: '40px',
+  textAlign: 'center',
+  marginLeft: '8px',
+  fontSize: '14px',
+  fontFamily: 'monospace',
+  backgroundColor: '#f3f2f1',
+  padding: '2px 4px',
+  borderRadius: '4px'
+}));
 
 interface HeatmapPlotProps {
   filePath: string;
   dataset: Dataset;
   allDatasets: Record<string, Dataset>;
+  controlsOnly?: boolean;
+  setStatus?: (status: StatusMessage | null) => void;
+  plotSettings?: PlotSettings;
+  setPlotSettings?: (settings: PlotSettings) => void;
 }
 
-const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDatasets }) => {
-  const [plotData, setPlotData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [plotSettings, setPlotSettings] = useState<PlotSettings>({
+const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ 
+  filePath, 
+  dataset, 
+  allDatasets, 
+  controlsOnly = false,
+  setStatus,
+  plotSettings: externalSettings,
+  setPlotSettings: setExternalSettings
+}) => {
+  const [internalPlotSettings, setInternalPlotSettings] = useState<PlotSettings>({
     xAxis: 0,
     yAxis: 1,
     slices: {},
@@ -20,20 +69,23 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
     xTicksDataset: '',
     yTicksDataset: ''
   });
+  const [plotData, setPlotData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [compatibleXDatasets, setCompatibleXDatasets] = useState<Dataset[]>([]);
   const [compatibleYDatasets, setCompatibleYDatasets] = useState<Dataset[]>([]);
 
-  // Available colorscales in Plotly
+  const plotSettings = externalSettings || internalPlotSettings;
+  const setPlotSettings = setExternalSettings || setInternalPlotSettings;
+
   const colorscales = [
     'Viridis', 'Plasma', 'Inferno', 'Magma', 'Cividis',
     'Jet', 'Hot', 'Cool', 'Greys', 'YlGnBu', 'RdBu', 'Portland'
   ];
 
-  // Find datasets compatible with the current axis dimensions
   useEffect(() => {
     if (!dataset || !dataset.shape || !allDatasets) return;
 
-    // For X axis: find 1D datasets with length matching the current X axis dimension
     const xAxisLength = dataset.shape[plotSettings.xAxis];
     const matchingXDatasets = Object.values(allDatasets).filter(d => 
       d.type === 'dataset' && 
@@ -44,7 +96,6 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
     );
     setCompatibleXDatasets(matchingXDatasets);
 
-    // For Y axis: find 1D datasets with length matching the current Y axis dimension
     const yAxisLength = dataset.shape[plotSettings.yAxis];
     const matchingYDatasets = Object.values(allDatasets).filter(d => 
       d.type === 'dataset' && 
@@ -59,7 +110,6 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
   useEffect(() => {
     if (!dataset || !filePath) return;
 
-    // Initialize default slices for dimensions beyond 2D
     if (dataset.shape && dataset.shape.length > 2) {
       const newSlices: Record<string, number> = {};
       for (let i = 0; i < dataset.shape.length; i++) {
@@ -69,37 +119,32 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
       }
       setPlotSettings(prev => ({ ...prev, slices: newSlices }));
     } else if (dataset.shape && dataset.shape.length === 2) {
-      // For 2D data, set default axes
       setPlotSettings(prev => ({
         ...prev,
-        xAxis: 1, // Column index
-        yAxis: 0, // Row index
+        xAxis: 1,
+        yAxis: 0,
       }));
     }
   }, [dataset, filePath]);
 
   useEffect(() => {
-    if (!dataset || !filePath) return;
+    if (!dataset || !filePath || controlsOnly) return;
     
     fetchDataForHeatmap();
-  }, [dataset, filePath, plotSettings]);
+  }, [dataset, filePath, plotSettings, controlsOnly]);
 
-  // Helper function to generate evenly spaced tick indices
   const generateSpacedTicks = (totalPoints: number, maxTicks: number = 10): number[] => {
     if (totalPoints <= maxTicks) {
       return Array.from({ length: totalPoints }, (_, i) => i);
     }
     
-    // Calculate appropriate step size to get approximately maxTicks
     const step = Math.ceil(totalPoints / maxTicks);
     const ticks: number[] = [];
     
-    // Generate evenly spaced indices
-    for (let i = 0; i < totalPoints; i += step) {
+    for (let i = 0; totalPoints; i += step) {
       ticks.push(i);
     }
     
-    // Always include the last point if it's not already included
     if (ticks[ticks.length - 1] !== totalPoints - 1) {
       ticks.push(totalPoints - 1);
     }
@@ -109,7 +154,12 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
 
   const fetchDataForHeatmap = async () => {
     if (!dataset.shape || dataset.shape.length < 2) {
-      setError('Dataset must have at least 2 dimensions for heatmap visualization');
+      const errorMsg = 'Dataset must have at least 2 dimensions for heatmap visualization';
+      setError(errorMsg);
+      setStatus?.({
+        message: errorMsg,
+        type: 'error'
+      });
       return;
     }
 
@@ -117,99 +167,89 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
     setError(null);
     
     try {
-      // Use the heatmap_data endpoint
       const slicesStr = JSON.stringify(plotSettings.slices);
       let url = `http://localhost:8000/heatmap_data?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(dataset.path)}&x_axis=${plotSettings.xAxis}&y_axis=${plotSettings.yAxis}&slices_str=${encodeURIComponent(slicesStr)}`;
       
+      // Additional parameters for custom tick datasets
+      if (plotSettings.xTicksDataset && allDatasets[plotSettings.xTicksDataset]) {
+        const xTicksPath = allDatasets[plotSettings.xTicksDataset].path;
+        url += `&x_ticks_dataset=${encodeURIComponent(xTicksPath)}`;
+      }
+      
+      if (plotSettings.yTicksDataset && allDatasets[plotSettings.yTicksDataset]) {
+        const yTicksPath = allDatasets[plotSettings.yTicksDataset].path;
+        url += `&y_ticks_dataset=${encodeURIComponent(yTicksPath)}`;
+      }
+      
       const response = await fetch(url);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to fetch heatmap data');
+        throw new Error(`API error: ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      // Get custom tick values for X axis if selected
-      let xTickValues: number[] | string[] | null = null;
-      if (plotSettings.xTicksDataset) {
-        try {
-          const xTicksUrl = `http://localhost:8000/dataset?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(plotSettings.xTicksDataset)}`;
-          const xTicksResponse = await fetch(xTicksUrl);
-          if (xTicksResponse.ok) {
-            const xTicksData = await xTicksResponse.json();
-            xTickValues = xTicksData.data.y_data;
-          }
-        } catch (error) {
-          console.error('Error fetching X tick labels:', error);
-        }
-      }
+      // The backend now ensures the data is properly oriented with rows as y-axis, columns as x-axis
+      const zValues = data.heatmap_data;
       
-      // Get custom tick values for Y axis if selected
-      let yTickValues: number[] | string[] | null = null;
-      if (plotSettings.yTicksDataset) {
-        try {
-          const yTicksUrl = `http://localhost:8000/dataset?file=${encodeURIComponent(filePath)}&path=${encodeURIComponent(plotSettings.yTicksDataset)}`;
-          const yTicksResponse = await fetch(yTicksUrl);
-          if (yTicksResponse.ok) {
-            const yTicksData = await yTicksResponse.json();
-            yTickValues = yTicksData.data.y_data;
-          }
-        } catch (error) {
-          console.error('Error fetching Y tick labels:', error);
-        }
-      }
+      // Use custom tick datasets if they were returned or use default indices
+      let xValues = data.x_ticks?.values || data.x_axis.values || Array.from({ length: zValues[0].length }, (_, i) => i);
+      let yValues = data.y_ticks?.values || data.y_axis.values || Array.from({ length: zValues.length }, (_, i) => i);
       
-      // The backend sends the complete 2D array formatted for the heatmap
-      setPlotData({
-        data: data.heatmap_data,
-        xTickValues: xTickValues,
-        yTickValues: yTickValues,
+      const heatmapData = [{
+        z: zValues,
+        x: xValues,
+        y: yValues,
+        type: 'heatmap',
         colorscale: plotSettings.colorscale,
+        colorbar: {
+          title: dataset.path.split('/').pop(),
+          thickness: 20,
+          len: 0.9
+        }
+      }];
+      
+      setPlotData(heatmapData);
+      setStatus?.({
+        message: 'Heatmap data loaded successfully',
+        type: 'success'
       });
     } catch (err) {
-      console.error('Error fetching data for heatmap:', err);
-      setError(`Failed to load data for heatmap visualization: ${err.message || err}`);
+      console.error('Error fetching heatmap data:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch heatmap data';
+      setError(errorMessage);
+      setStatus?.({
+        message: `Error fetching heatmap data: ${errorMessage}`,
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAxisChange = (axis: 'xAxis' | 'yAxis', value: number) => {
-    if (value === plotSettings.xAxis && axis === 'yAxis') {
-      // Swap the axes if the user selects the same axis for both
-      setPlotSettings(prev => ({
-        ...prev,
-        xAxis: prev.yAxis,
-        yAxis: value,
-        // Reset tick datasets when axes change
-        xTicksDataset: '',
-        yTicksDataset: ''
-      }));
-    } else if (value === plotSettings.yAxis && axis === 'xAxis') {
-      setPlotSettings(prev => ({
-        ...prev,
-        yAxis: prev.xAxis,
-        xAxis: value,
-        // Reset tick datasets when axes change
-        xTicksDataset: '',
-        yTicksDataset: ''
-      }));
+  const handleAxisSelectionChange = (axis: 'xAxis' | 'yAxis', value: number) => {
+    if (value === plotSettings.xAxis || value === plotSettings.yAxis) {
+      if (axis === 'xAxis') {
+        setPlotSettings(prev => ({
+          ...prev,
+          xAxis: value,
+          yAxis: prev.xAxis,
+          slices: {}
+        }));
+      } else {
+        setPlotSettings(prev => ({
+          ...prev,
+          xAxis: prev.yAxis,
+          yAxis: value,
+          slices: {}
+        }));
+      }
     } else {
       setPlotSettings(prev => ({
         ...prev,
         [axis]: value,
-        // Reset only the affected axis tick dataset
-        ...(axis === 'xAxis' ? { xTicksDataset: '' } : {}),
-        ...(axis === 'yAxis' ? { yTicksDataset: '' } : {})
+        slices: {}
       }));
     }
-  };
-
-  const handleTicksDatasetChange = (axis: 'xTicksDataset' | 'yTicksDataset', value: string) => {
-    setPlotSettings(prev => ({
-      ...prev,
-      [axis]: value
-    }));
   };
 
   const handleSliceChange = (dimension: string, value: number) => {
@@ -222,184 +262,305 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({ filePath, dataset, allDataset
     }));
   };
 
-  const handleColorscaleChange = (colorscale: string) => {
-    setPlotSettings(prev => ({ ...prev, colorscale }));
+  const handleColorscaleChange = (value: string) => {
+    setPlotSettings(prev => ({
+      ...prev,
+      colorscale: value
+    }));
   };
 
-  if (!dataset) return null;
+  const handleTicksDatasetChange = (axis: 'xTicksDataset' | 'yTicksDataset', value: string) => {
+    setPlotSettings(prev => ({
+      ...prev,
+      [axis]: value
+    }));
+  };
 
-  // Generate reasonably spaced tick indices
-  const xTicks = plotData?.xTickValues ? 
-    generateSpacedTicks(plotData.xTickValues.length) : null;
-  const yTicks = plotData?.yTickValues ? 
-    generateSpacedTicks(plotData.yTickValues.length) : null;
+  if (controlsOnly) {
+    return (
+      <Box sx={{ mb: 2 }}>
+        <ControlAccordion 
+          title="Axis Configuration" 
+          icon={<GridOnIcon />}
+          defaultExpanded={true}
+        >
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="x-axis-select-label">X Axis (Dimension)</InputLabel>
+            <Select
+              labelId="x-axis-select-label"
+              id="x-axis-select"
+              value={plotSettings.xAxis}
+              label="X Axis (Dimension)"
+              onChange={(e) => handleAxisSelectionChange('xAxis', Number(e.target.value))}
+              size="small"
+            >
+              {dataset.shape && dataset.shape.map((dim, index) => (
+                <MenuItem key={`x-${index}`} value={index}>
+                  Dimension {index} (Size: {dim})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-  // Prepare tick text values at those indices
-  const xTickText = xTicks && plotData?.xTickValues ? 
-    xTicks.map(i => plotData.xTickValues[i]) : null;
-  const yTickText = yTicks && plotData?.yTickValues ? 
-    yTicks.map(i => plotData.yTickValues[i]) : null;
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="y-axis-select-label">Y Axis (Dimension)</InputLabel>
+            <Select
+              labelId="y-axis-select-label"
+              id="y-axis-select"
+              value={plotSettings.yAxis}
+              label="Y Axis (Dimension)"
+              onChange={(e) => handleAxisSelectionChange('yAxis', Number(e.target.value))}
+              size="small"
+            >
+              {dataset.shape && dataset.shape.map((dim, index) => (
+                <MenuItem key={`y-${index}`} value={index}>
+                  Dimension {index} (Size: {dim})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </ControlAccordion>
 
-  return (
-    <div className="heatmap-plot">
-      <h2>Heatmap for {dataset.path}</h2>
-      
-      <div className="plot-controls">
-        <div className="control-group">
-          <label>X Axis:</label>
-          <select 
-            value={plotSettings.xAxis}
-            onChange={(e) => handleAxisChange('xAxis', parseInt(e.target.value))}
-          >
-            {dataset.shape?.map((size, idx) => (
-              <option key={`x-${idx}`} value={idx}>
-                Dimension {idx} (size: {size})
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="control-group">
-          <label>X Axis Labels:</label>
-          <select
-            value={plotSettings.xTicksDataset}
-            onChange={(e) => handleTicksDatasetChange('xTicksDataset', e.target.value)}
-          >
-            <option value="">Default (indices)</option>
-            {compatibleXDatasets.map(d => (
-              <option key={d.path} value={d.path}>
-                {d.path}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="control-group">
-          <label>Y Axis:</label>
-          <select 
-            value={plotSettings.yAxis}
-            onChange={(e) => handleAxisChange('yAxis', parseInt(e.target.value))}
-          >
-            {dataset.shape?.map((size, idx) => (
-              <option key={`y-${idx}`} value={idx}>
-                Dimension {idx} (size: {size})
-              </option>
-            ))}
-          </select>
-        </div>
+        <ControlAccordion 
+          title="Color Settings"
+          icon={<PaletteIcon />}
+          defaultExpanded={true}
+        >
+          <FormControl fullWidth>
+            <InputLabel id="colorscale-select-label">Colorscale</InputLabel>
+            <Select
+              labelId="colorscale-select-label"
+              id="colorscale-select"
+              value={plotSettings.colorscale}
+              label="Colorscale"
+              onChange={(e) => handleColorscaleChange(e.target.value)}
+              size="small"
+            >
+              {colorscales.map(scale => (
+                <MenuItem key={scale} value={scale}>
+                  {scale}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </ControlAccordion>
 
-        <div className="control-group">
-          <label>Y Axis Labels:</label>
-          <select
-            value={plotSettings.yTicksDataset}
-            onChange={(e) => handleTicksDatasetChange('yTicksDataset', e.target.value)}
+        {dataset.shape && dataset.shape.length > 2 && (
+          <ControlAccordion 
+            title="Slice Controls"
+            icon={<ViewSlider />}
+            defaultExpanded={true}
           >
-            <option value="">Default (indices)</option>
-            {compatibleYDatasets.map(d => (
-              <option key={d.path} value={d.path}>
-                {d.path}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="control-group">
-          <label>Colorscale:</label>
-          <select 
-            value={plotSettings.colorscale}
-            onChange={(e) => handleColorscaleChange(e.target.value)}
-          >
-            {colorscales.map(scale => (
-              <option key={scale} value={scale}>{scale}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      
-      {/* Show slice controls for dimensions beyond the first two */}
-      {dataset.shape && dataset.shape.length > 2 && (
-        <div className="slice-controls">
-          <h3>Slice Controls</h3>
-          <div className="slice-sliders">
-            {dataset.shape.map((size, idx) => {
-              // Only show sliders for dimensions not used as X or Y axes
-              if (idx !== plotSettings.xAxis && idx !== plotSettings.yAxis) {
+            {dataset.shape.map((dim, index) => {
+              if (index !== plotSettings.xAxis && index !== plotSettings.yAxis) {
                 return (
-                  <div key={`slice-${idx}`} className="slice-slider">
-                    <label>Dimension {idx} (size: {size}):</label>
-                    <input 
-                      type="range"
-                      min={0}
-                      max={size - 1}
-                      value={plotSettings.slices[idx.toString()] || 0}
-                      onChange={(e) => handleSliceChange(idx.toString(), parseInt(e.target.value))}
-                    />
-                    <span>{plotSettings.slices[idx.toString()] || 0}</span>
-                  </div>
+                  <Box key={`slice-${index}`} sx={{ mb: 2 }}>
+                    <SliderContainer>
+                      <SliderLabel>
+                        Dimension {index}:
+                      </SliderLabel>
+                      <Slider
+                        size="small"
+                        min={0}
+                        max={dim-1}
+                        value={plotSettings.slices[index.toString()] || 0}
+                        onChange={(_, value) => handleSliceChange(index.toString(), value as number)}
+                        sx={{ mx: 1, flex: 1 }}
+                      />
+                      <SliderValue>
+                        {plotSettings.slices[index.toString()] || 0}
+                      </SliderValue>
+                    </SliderContainer>
+                  </Box>
                 );
               }
               return null;
             })}
-          </div>
-        </div>
-      )}
-      
-      {loading && <p>Loading dataset for visualization...</p>}
-      {error && <p className="error">{error}</p>}
-      
-      {plotData && !loading && (
-        <div className="plot-container">
+          </ControlAccordion>
+        )}
+
+        <ControlAccordion 
+          title="Custom Ticks" 
+          icon={<LabelIcon />}
+          defaultExpanded={false}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Replace default axis ticks with values from compatible datasets.
+          </Typography>
+          
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="x-ticks-dataset-label">X-Axis Ticks</InputLabel>
+            <Select
+              labelId="x-ticks-dataset-label"
+              id="x-ticks-dataset"
+              value={plotSettings.xTicksDataset}
+              label="X-Axis Ticks"
+              onChange={(e) => handleTicksDatasetChange('xTicksDataset', e.target.value)}
+              size="small"
+            >
+              <MenuItem value="">Default indices</MenuItem>
+              {compatibleXDatasets.map(d => (
+                <MenuItem key={d.path} value={d.path}>
+                  {d.path.split('/').pop()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <InputLabel id="y-ticks-dataset-label">Y-Axis Ticks</InputLabel>
+            <Select
+              labelId="y-ticks-dataset-label"
+              id="y-ticks-dataset"
+              value={plotSettings.yTicksDataset}
+              label="Y-Axis Ticks"
+              onChange={(e) => handleTicksDatasetChange('yTicksDataset', e.target.value)}
+              size="small"
+            >
+              <MenuItem value="">Default indices</MenuItem>
+              {compatibleYDatasets.map(d => (
+                <MenuItem key={d.path} value={d.path}>
+                  {d.path.split('/').pop()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </ControlAccordion>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ width: '100%', height: '100%' }}>
+      {loading ? (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%'
+        }}>
+          <CircularProgress />
+          <Typography sx={{ mt: 2 }}>Loading heatmap data...</Typography>
+        </Box>
+      ) : error ? (
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          width: '100%',
+          p: 3
+        }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              border: '1px solid #d32f2f',
+              borderRadius: '4px',
+              backgroundColor: '#fdeded',
+              width: '80%',
+            }}
+          >
+            <Typography variant="h6" color="error" gutterBottom>Error</Typography>
+            <Typography>{error}</Typography>
+          </Paper>
+        </Box>
+      ) : plotData ? (
+        <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
           <Plot
-            data={[{
-              z: plotData.data,
-              type: 'heatmap',
-              colorscale: plotSettings.colorscale,
-              transpose: true, // Fix the transposition issue
-            }]}
+            data={plotData}
             layout={{
-              title: `Heatmap of ${dataset.path}`,
-              width: 800,
-              height: 600,
+              title: {
+                text: dataset.path.split('/').pop() || '',
+                font: {
+                  family: 'Computer Modern, serif',
+                  size: 24
+                }
+              },
+              autosize: true,
+              margin: { l: 50, r: 50, t: 60, b: 50 },
               xaxis: {
-                title: plotSettings.xTicksDataset 
-                  ? `${plotSettings.xTicksDataset}` 
-                  : `Dimension ${plotSettings.xAxis}`,
-                tickmode: xTickText ? 'array' : 'auto',
-                tickvals: xTicks,
-                ticktext: xTickText,
-                automargin: true,
-                nticks: 10,
+                title: {
+                  text: `Dimension ${plotSettings.xAxis} ${plotSettings.xTicksDataset ? `(${plotSettings.xTicksDataset.split('/').pop()})` : ''}`,
+                  font: {
+                    family: 'Computer Modern, serif',
+                    size: 16
+                  }
+                },
                 showgrid: true,
-                zeroline: false,
-                showline: true,
-                mirror: 'all',
-                showticklabels: true
+                zeroline: true,
+                tickfont: {
+                  family: 'Computer Modern, serif'
+                },
+                ticks: 'inside'
               },
               yaxis: {
-                title: plotSettings.yTicksDataset 
-                  ? `${plotSettings.yTicksDataset}` 
-                  : `Dimension ${plotSettings.yAxis}`,
-                tickmode: yTickText ? 'array' : 'auto',
-                tickvals: yTicks,
-                ticktext: yTickText,
-                automargin: true,
-                nticks: 10,
+                title: {
+                  text: `Dimension ${plotSettings.yAxis} ${plotSettings.yTicksDataset ? `(${plotSettings.yTicksDataset.split('/').pop()})` : ''}`,
+                  font: {
+                    family: 'Computer Modern, serif',
+                    size: 16
+                  }
+                },
                 showgrid: true,
-                zeroline: false,
-                showline: true,
-                mirror: 'all',
-                showticklabels: true
+                zeroline: true,
+                tickfont: {
+                  family: 'Computer Modern, serif'
+                },
+                ticks: 'inside'
+              },
+              coloraxis: {
+                colorbar: {
+                  tickfont: {
+                    family: 'Computer Modern, serif'
+                  },
+                  title: {
+                    font: {
+                      family: 'Computer Modern, serif'
+                    }
+                  }
+                }
               }
             }}
             config={{
               responsive: true,
+              toImageButtonOptions: {
+                format: 'png',
+                filename: `heatmap_${dataset.path.split('/').pop()}`,
+                scale: 2
+              },
               displayModeBar: true,
-              scrollZoom: true
+              displaylogo: false,
+              modeBarButtonsToRemove: ['lasso2d', 'select2d']
             }}
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}
+            useResizeHandler={true}
           />
-        </div>
+        </Box>
+      ) : (
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          width: '100%',
+          color: 'text.secondary',
+          p: 3
+        }}>
+          <Typography variant="h6" gutterBottom>No data available</Typography>
+          <Typography>Please adjust plot settings to visualize the data.</Typography>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -1,26 +1,149 @@
 import React, { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
-import { Dataset, PlotType, Series1DSettings } from '../types';
+import { 
+  Box, 
+  Typography, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel, 
+  TextField, 
+  Slider, 
+  Button, 
+  IconButton, 
+  CircularProgress,
+  Paper,
+  styled,
+  Grid,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Card,
+  CardContent
+} from '@mui/material';
+
+// Fix the icon imports
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import ViewStreamIcon from '@mui/icons-material/ViewStream';
+import FormatColorFillIcon from '@mui/icons-material/FormatColorFill';
+import TuneIcon from '@mui/icons-material/Tune';
+import SettingsIcon from '@mui/icons-material/Settings';
+
+import { ControlAccordion } from './PlotControlsSidebar';
+import { Dataset, PlotType, Series1DSettings, StatusMessage } from '../types';
+
+const ColorInput = styled('input')({
+  width: '100%',
+  padding: '4px',
+  border: '1px solid #b1b4b6',
+  borderRadius: '4px'
+});
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  marginTop: '8px',
+  marginBottom: '8px',
+  textTransform: 'none',
+}));
+
+const SliderContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: '8px',
+  marginBottom: '8px'
+}));
+
+const SliderLabel = styled(Typography)(({ theme }) => ({
+  width: '100px',
+  fontSize: '14px'
+}));
+
+const SliderValue = styled(Typography)(({ theme }) => ({
+  width: '40px',
+  textAlign: 'center',
+  marginLeft: '8px',
+  fontSize: '14px',
+  fontFamily: 'monospace',
+  backgroundColor: '#f3f2f1',
+  padding: '2px 4px',
+  borderRadius: '4px'
+}));
 
 interface Series1DPlotProps {
   filePath: string;
   allDatasets: Record<string, Dataset>;
   selectedDataset: Dataset | null;
+  controlsOnly?: boolean;
+  setStatus?: (status: StatusMessage | null) => void;
+  // New props for shared state
+  seriesSettings?: Series1DSettings[];
+  setSeriesSettings?: (settings: Series1DSettings[]) => void;
+  showNDimOptions?: boolean;
+  sliceAxis?: number;
+  setSliceAxis?: (axis: number) => void;
+  sliceSettings?: Record<string, number>;
+  setSliceSettings?: (settings: Record<string, number>) => void;
 }
 
-const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, selectedDataset }) => {
+// Helper function to calculate statistics for a data array
+const calculateStatistics = (data: number[]) => {
+  if (!data || data.length === 0) return null;
+  
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const sum = data.reduce((acc, val) => acc + val, 0);
+  const mean = sum / data.length;
+  
+  // Calculate standard deviation
+  const squaredDiffs = data.map(val => Math.pow(val - mean, 2));
+  const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / data.length;
+  const stdDev = Math.sqrt(variance);
+  
+  return {
+    min,
+    max,
+    mean,
+    stdDev,
+    count: data.length
+  };
+};
+
+const Series1DPlot: React.FC<Series1DPlotProps> = ({ 
+  filePath, 
+  allDatasets, 
+  selectedDataset,
+  controlsOnly = false,
+  setStatus,
+  // External state props
+  seriesSettings: externalSeriesSettings,
+  setSeriesSettings: setExternalSeriesSettings,
+  showNDimOptions: externalShowNDimOptions,
+  sliceAxis: externalSliceAxis,
+  setSliceAxis: setExternalSliceAxis,
+  sliceSettings: externalSliceSettings,
+  setSliceSettings: setExternalSliceSettings
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableDatasets, setAvailableDatasets] = useState<Dataset[]>([]);
-  const [seriesSettings, setSeriesSettings] = useState<Series1DSettings[]>([]);
-  const [plotData, setPlotData] = useState<any[]>([]);
   
-  // For n-dimensional dataset slicing
-  const [showNDimOptions, setShowNDimOptions] = useState(false);
-  const [sliceAxis, setSliceAxis] = useState<number>(0);
-  const [sliceIndex, setSliceIndex] = useState<number>(0);
-  const [sliceMaxDimension, setSliceMaxDimension] = useState<number>(0);
-  const [sliceSettings, setSliceSettings] = useState<Record<string, number>>({});
+  // Internal state to use if external state is not provided
+  const [internalSeriesSettings, setInternalSeriesSettings] = useState<Series1DSettings[]>([]);
+  const [internalShowNDimOptions, setInternalShowNDimOptions] = useState(false);
+  const [internalSliceAxis, setInternalSliceAxis] = useState<number>(0);
+  const [internalSliceMaxDimension, setSliceMaxDimension] = useState<number>(0);
+  const [internalSliceSettings, setInternalSliceSettings] = useState<Record<string, number>>({});
+  const [plotData, setPlotData] = useState<any[]>([]);
+
+  // Use external state if provided, otherwise use internal state
+  const seriesSettings = externalSeriesSettings || internalSeriesSettings;
+  const setSeriesSettings = setExternalSeriesSettings || setInternalSeriesSettings;
+  const showNDimOptions = externalShowNDimOptions !== undefined ? externalShowNDimOptions : internalShowNDimOptions;
+  const sliceAxis = externalSliceAxis !== undefined ? externalSliceAxis : internalSliceAxis;
+  const setSliceAxis = setExternalSliceAxis || setInternalSliceAxis;
+  const sliceSettings = externalSliceSettings || internalSliceSettings;
+  const setSliceSettings = setExternalSliceSettings || setInternalSliceSettings;
 
   // Available plot types
   const plotTypes: PlotType[] = ['scatter', 'line', 'line+marker'];
@@ -34,34 +157,39 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
   // Check if we have a multi-dimensional dataset selected
   useEffect(() => {
     if (!selectedDataset) {
-      setShowNDimOptions(false);
+      if (!externalShowNDimOptions) {
+        setInternalShowNDimOptions(false);
+      }
       return;
     }
 
     // Check if dataset has more than 1 dimension
     if (selectedDataset.shape && selectedDataset.shape.length > 1) {
-      setShowNDimOptions(true);
+      if (!externalShowNDimOptions) {
+        setInternalShowNDimOptions(true);
+      }
       
       // Initialize slice settings for each dimension
-      const newSliceSettings: Record<string, number> = {};
-      for (let i = 0; i < selectedDataset.shape.length; i++) {
-        if (i !== sliceAxis) {
-          newSliceSettings[i.toString()] = Math.floor(selectedDataset.shape[i] / 2);
+      if (!externalSliceSettings) {
+        const newSliceSettings: Record<string, number> = {};
+        for (let i = 0; i < selectedDataset.shape.length; i++) {
+          if (i !== sliceAxis) {
+            newSliceSettings[i.toString()] = Math.floor(selectedDataset.shape[i] / 2);
+          }
         }
+        setInternalSliceSettings(newSliceSettings);
       }
-      setSliceSettings(newSliceSettings);
       
       // Set max dimension for the current slice axis
       if (selectedDataset.shape[sliceAxis]) {
         setSliceMaxDimension(selectedDataset.shape[sliceAxis] - 1);
       }
-      
-      // Reset slice index to valid value
-      setSliceIndex(0);
     } else {
-      setShowNDimOptions(false);
+      if (!externalShowNDimOptions) {
+        setInternalShowNDimOptions(false);
+      }
     }
-  }, [selectedDataset, sliceAxis]);
+  }, [selectedDataset, sliceAxis, externalShowNDimOptions, externalSliceSettings]);
 
   // Filter datasets to show only 1D datasets
   useEffect(() => {
@@ -78,15 +206,13 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
   }, [allDatasets]);
 
   // Handle slice axis selection change
-  const handleSliceAxisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSliceAxisChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const axis = parseInt(e.target.value);
     setSliceAxis(axis);
     
     if (selectedDataset?.shape && selectedDataset.shape.length > axis) {
       // Update max dimension for the new axis
       setSliceMaxDimension(selectedDataset.shape[axis] - 1);
-      // Reset slice index to valid value
-      setSliceIndex(0);
     }
   };
 
@@ -103,6 +229,13 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
     };
     
     setSeriesSettings([...seriesSettings, newSeries]);
+    
+    if (setStatus) {
+      setStatus({
+        message: 'Added new series',
+        type: 'info'
+      });
+    }
   };
 
   // Add the selected N-dimensional dataset slice
@@ -129,9 +262,16 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
       isNDimSlice: true,
       sliceAxis,
       slicesForOtherDimensions: slicesForBackend
-    } as any;
+    };
     
     setSeriesSettings([...seriesSettings, newSeries]);
+    
+    if (setStatus) {
+      setStatus({
+        message: `Added slice from ${selectedDataset.path}`,
+        type: 'info'
+      });
+    }
   };
 
   // Remove a series from the plot
@@ -139,6 +279,13 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
     const newSettings = [...seriesSettings];
     newSettings.splice(index, 1);
     setSeriesSettings(newSettings);
+    
+    if (setStatus) {
+      setStatus({
+        message: 'Removed series',
+        type: 'info'
+      });
+    }
   };
 
   // Update series settings
@@ -161,7 +308,7 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
 
   // Fetch data for all series
   useEffect(() => {
-    if (seriesSettings.length === 0 || !filePath) return;
+    if (seriesSettings.length === 0 || !filePath || controlsOnly) return;
     
     const fetchAllSeriesData = async () => {
       setLoading(true);
@@ -174,10 +321,10 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
           // Different handling for different types of data sources
           let seriesData;
           
-          if ((series as any).isNDimSlice) {
+          if (series.isNDimSlice) {
             // This is a N-dimensional dataset slice
-            const sliceAxis = (series as any).sliceAxis;
-            const slices = (series as any).slicesForOtherDimensions;
+            const sliceAxis = series.sliceAxis;
+            const slices = series.slicesForOtherDimensions;
             
             // Convert slices to JSON string
             const slicesStr = JSON.stringify(slices);
@@ -248,199 +395,439 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({ filePath, allDatasets, sele
         }
         
         setPlotData(plotDataArray);
+        
+        if (setStatus) {
+          setStatus({
+            message: 'Series data loaded successfully',
+            type: 'success'
+          });
+        }
       } catch (err) {
         console.error('Error fetching series data:', err);
-        setError(`Failed to load series data: ${err.message || err}`);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load series data';
+        setError(errorMessage);
+        
+        if (setStatus) {
+          setStatus({
+            message: errorMessage,
+            type: 'error'
+          });
+        }
       } finally {
         setLoading(false);
       }
     };
     
     fetchAllSeriesData();
-  }, [seriesSettings, filePath]);
+  }, [seriesSettings, filePath, controlsOnly]);
 
-  return (
-    <div className="series-plot">
-      <h2>1D Series Plot</h2>
-      
-      <div className="plot-controls">
+  // Render controls for the sidebar
+  if (controlsOnly) {
+    return (
+      <Box sx={{ mb: 2 }}>
         {/* Controls for N-dimensional dataset slicing */}
         {showNDimOptions && selectedDataset && (
-          <div className="ndim-slice-controls">
-            <h3>Plot {selectedDataset.path} as 1D Slice</h3>
+          <ControlAccordion 
+            title="Extract 1D Slice" 
+            icon={<ViewStreamIcon sx={{ color: '#1d70b8' }} />}
+            defaultExpanded={true}
+          >
+            <Typography variant="body2" gutterBottom>
+              Extract a 1D slice from {selectedDataset.path}
+            </Typography>
             
-            <div className="form-group">
-              <label>Extract data along axis:</label>
-              <select
+            <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
+              <InputLabel id="slice-axis-label">Extract along axis</InputLabel>
+              <Select
+                labelId="slice-axis-label"
                 value={sliceAxis}
-                onChange={handleSliceAxisChange}
+                label="Extract along axis"
+                onChange={(e) => setSliceAxis(Number(e.target.value))}
+                size="small"
               >
                 {selectedDataset.shape?.map((size, idx) => (
-                  <option key={idx} value={idx}>
+                  <MenuItem key={idx} value={idx}>
                     Axis {idx} (size: {size})
-                  </option>
+                  </MenuItem>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormControl>
             
-            {/* Show slice controls for other dimensions */}
-            <div className="other-dimensions">
-              <h4>Select values for other dimensions:</h4>
-              {selectedDataset.shape?.map((size, idx) => {
-                // Only show controls for dimensions other than the slice axis
-                if (idx !== sliceAxis) {
-                  return (
-                    <div key={`dim-${idx}`} className="dimension-slice">
-                      <label>Dimension {idx} (size: {size}):</label>
-                      <div className="slice-input">
-                        <input 
-                          type="range"
-                          min={0}
-                          max={size - 1}
-                          value={sliceSettings[idx.toString()] || 0}
-                          onChange={(e) => handleOtherDimensionSliceChange(idx.toString(), parseInt(e.target.value))}
-                        />
-                        <span>{sliceSettings[idx.toString()] || 0}</span>
-                      </div>
-                    </div>
-                  );
+            <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
+              Set values for other dimensions:
+            </Typography>
+            
+            {selectedDataset.shape?.map((size, idx) => {
+              // Only show controls for dimensions other than the slice axis
+              if (idx !== sliceAxis) {
+                return (
+                  <Box key={`dim-${idx}`} sx={{ mb: 2 }}>
+                    <SliderContainer>
+                      <SliderLabel>
+                        Dimension {idx}:
+                      </SliderLabel>
+                      <Slider
+                        size="small"
+                        min={0}
+                        max={size - 1}
+                        value={sliceSettings[idx.toString()] || 0}
+                        onChange={(_, value) => handleOtherDimensionSliceChange(idx.toString(), value as number)}
+                        sx={{ mx: 1, flex: 1 }}
+                      />
+                      <SliderValue>
+                        {sliceSettings[idx.toString()] || 0}
+                      </SliderValue>
+                    </SliderContainer>
+                  </Box>
+                );
+              }
+              return null;
+            })}
+            
+            <ActionButton
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={addNDimSlice}
+              fullWidth
+              sx={{ 
+                backgroundColor: '#1d70b8',
+                '&:hover': {
+                  backgroundColor: '#003078'
                 }
-                return null;
-              })}
-            </div>
-            
-            <button onClick={addNDimSlice} className="add-ndim-slice-btn">
-              Add to Plot
-            </button>
-          </div>
+              }}
+            >
+              Add Slice to Plot
+            </ActionButton>
+          </ControlAccordion>
         )}
         
-        <div className="series-controls">
-          <h3>Add 1D Dataset Series</h3>
-          <button onClick={addSeries} className="add-series-btn">
-            Add 1D Dataset
-          </button>
+        {/* Controls for adding and configuring 1D series */}
+        <ControlAccordion 
+          title="Series Settings" 
+          icon={<ShowChartIcon sx={{ color: '#1d70b8' }} />}
+          defaultExpanded={!showNDimOptions}
+        >
+          <Typography variant="body2" gutterBottom>
+            Add and configure 1D data series
+          </Typography>
+          
+          <ActionButton
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={addSeries}
+            fullWidth
+            sx={{ mb: 3 }}
+          >
+            Add Dataset Series
+          </ActionButton>
           
           {seriesSettings.map((series, idx) => (
-            <div key={`series-${idx}`} className="series-config">
-              <h4>Series {idx + 1}</h4>
-              <div className="series-form">
-                <div className="form-group">
-                  <label>Dataset:</label>
-                  <select
-                    value={series.seriesPath}
-                    onChange={(e) => updateSeriesSetting(idx, 'seriesPath', e.target.value)}
-                  >
-                    {availableDatasets.map(d => (
-                      <option key={d.path} value={d.path}>
-                        {d.path} {d.shape ? `[${d.shape.join(', ')}]` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>X Values (Optional):</label>
-                  <select
-                    value={series.xDataset}
-                    onChange={(e) => updateSeriesSetting(idx, 'xDataset', e.target.value)}
-                  >
-                    <option value="">Default (indices)</option>
-                    {availableDatasets.map(d => (
-                      <option key={d.path} value={d.path}>
-                        {d.path} {d.shape ? `[${d.shape.join(', ')}]` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Plot Type:</label>
-                  <select
-                    value={series.plotType}
-                    onChange={(e) => updateSeriesSetting(idx, 'plotType', e.target.value as PlotType)}
-                  >
-                    {plotTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label>Color:</label>
-                  <input
+            <Paper 
+              key={`series-${idx}`} 
+              elevation={0}
+              sx={{ 
+                mb: 3, 
+                p: 2, 
+                border: '1px solid #b1b4b6',
+                position: 'relative'
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Series {idx + 1}
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={() => removeSeries(idx)}
+                  color="error"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id={`dataset-select-${idx}`}>Dataset</InputLabel>
+                <Select
+                  labelId={`dataset-select-${idx}`}
+                  size="small"
+                  value={series.seriesPath}
+                  label="Dataset"
+                  onChange={(e) => updateSeriesSetting(idx, 'seriesPath', e.target.value as string)}
+                >
+                  {availableDatasets.map(d => (
+                    <MenuItem key={d.path} value={d.path}>
+                      {d.path} {d.shape ? `[${d.shape.join(', ')}]` : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id={`x-values-select-${idx}`}>X Values (Optional)</InputLabel>
+                <Select
+                  labelId={`x-values-select-${idx}`}
+                  size="small"
+                  value={series.xDataset}
+                  label="X Values (Optional)"
+                  onChange={(e) => updateSeriesSetting(idx, 'xDataset', e.target.value as string)}
+                >
+                  <MenuItem value="">Default (indices)</MenuItem>
+                  {availableDatasets.map(d => (
+                    <MenuItem key={d.path} value={d.path}>
+                      {d.path} {d.shape ? `[${d.shape.join(', ')}]` : ''}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel id={`plot-type-select-${idx}`}>Plot Type</InputLabel>
+                <Select
+                  labelId={`plot-type-select-${idx}`}
+                  size="small"
+                  value={series.plotType}
+                  label="Plot Type"
+                  onChange={(e) => updateSeriesSetting(idx, 'plotType', e.target.value as PlotType)}
+                >
+                  {plotTypes.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" gutterBottom>
+                    Color
+                  </Typography>
+                  <ColorInput
                     type="color"
                     value={series.color}
                     onChange={(e) => updateSeriesSetting(idx, 'color', e.target.value)}
                   />
-                </div>
-                
-                <div className="form-group">
-                  <label>Name:</label>
-                  <input
-                    type="text"
-                    value={series.name}
-                    onChange={(e) => updateSeriesSetting(idx, 'name', e.target.value)}
-                  />
-                </div>
-                
-                <button onClick={() => removeSeries(idx)} className="remove-series-btn">
-                  Remove
-                </button>
-              </div>
-            </div>
+                </Grid>
+                <Grid item xs={6}>
+                  <FormControl fullWidth>
+                    <TextField
+                      label="Name"
+                      size="small"
+                      value={series.name}
+                      onChange={(e) => updateSeriesSetting(idx, 'name', e.target.value)}
+                    />
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </Paper>
           ))}
-        </div>
-      </div>
-      
-      {loading && <p>Loading series data...</p>}
-      {error && <p className="error">{error}</p>}
-      
-      {plotData.length > 0 && !loading && (
-        <div className="plot-container">
-          <Plot
-            data={plotData}
-            layout={{
-              title: '1D Series Plot',
-              width: 800,
-              height: 600,
-              xaxis: {
-                title: 'X Axis',
-                showgrid: true,
-                zeroline: true,
-              },
-              yaxis: {
-                title: 'Y Axis',
-                showgrid: true,
-                zeroline: true,
-              },
-              legend: {
-                x: 1,
-                xanchor: 'right',
-                y: 1
-              }
+          
+          {seriesSettings.length === 0 && (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+              No series added yet. Use the buttons above to add data.
+            </Typography>
+          )}
+        </ControlAccordion>
+      </Box>
+    );
+  }
+
+  // Render the main plot area
+  return (
+    <Box sx={{ width: '100%', height: '100%' }}>
+      {loading ? (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%',
+            width: '100%',
+            flexDirection: 'column',
+            gap: 2
+          }}
+        >
+          <CircularProgress />
+          <Typography>Loading series data...</Typography>
+        </Box>
+      ) : error ? (
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          width: '100%'
+        }}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              border: '1px solid #d32f2f',
+              borderRadius: '4px',
+              backgroundColor: '#fdeded',
+              textAlign: 'center',
+              width: '80%'
             }}
-            config={{
-              responsive: true,
-              displayModeBar: true,
-              scrollZoom: true
-            }}
-          />
-        </div>
+          >
+            <Typography color="error" variant="h6" gutterBottom>
+              Error
+            </Typography>
+            <Typography>{error}</Typography>
+          </Paper>
+        </Box>
+      ) : plotData.length > 0 ? (
+        <Box 
+          sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          {/* Stats Panel - Optional, can be hidden if screen space is limited */}
+          {plotData.map((series, idx) => {
+            const stats = calculateStatistics(series.y);
+            if (!stats) return null;
+            
+            return (
+              <Card key={`stats-${idx}`} sx={{ mb: 2, maxWidth: 350, display: 'none' }}>
+                <CardContent>
+                  <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
+                    Series Statistics
+                  </Typography>
+                  <Typography variant="h6" component="div" sx={{ mb: 1.5 }}>
+                    {series.name}
+                  </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">Min: {stats.min.toFixed(4)}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">Max: {stats.max.toFixed(4)}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">Mean: {stats.mean.toFixed(4)}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2">Std Dev: {stats.stdDev.toFixed(4)}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2">Data Points: {stats.count}</Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            );
+          })}
+          
+          <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+            <Plot
+              data={plotData}
+              layout={{
+                title: {
+                  text: '1D Series Plot',
+                  font: {
+                    family: 'Computer Modern, serif',
+                    size: 24
+                  }
+                },
+                autosize: true,
+                margin: { l: 50, r: 50, t: 60, b: 50 },
+                xaxis: {
+                  title: {
+                    text: 'X Axis',
+                    font: {
+                      family: 'Computer Modern, serif',
+                      size: 16
+                    }
+                  },
+                  showgrid: true,
+                  zeroline: true,
+                  tickfont: {
+                    family: 'Computer Modern, serif'
+                  },
+                  ticks: 'inside'
+                },
+                yaxis: {
+                  title: {
+                    text: 'Y Axis',
+                    font: {
+                      family: 'Computer Modern, serif',
+                      size: 16
+                    }
+                  },
+                  showgrid: true,
+                  zeroline: true,
+                  tickfont: {
+                    family: 'Computer Modern, serif'
+                  },
+                  ticks: 'inside'
+                },
+                legend: {
+                  x: 1,
+                  xanchor: 'right',
+                  y: 1,
+                  font: {
+                    family: 'Computer Modern, serif'
+                  }
+                }
+              }}
+              config={{
+                responsive: true,
+                toImageButtonOptions: {
+                  format: 'png',
+                  filename: 'series_plot',
+                  scale: 2
+                },
+                displayModeBar: true,
+                displaylogo: false,
+                scrollZoom: true
+              }}
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                position: 'absolute',
+                top: 0,
+                left: 0
+              }}
+              useResizeHandler={true}
+            />
+          </Box>
+        </Box>
+      ) : (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%',
+            width: '100%',
+            flexDirection: 'column',
+            px: 4,
+            textAlign: 'center'
+          }}
+        >
+          {showNDimOptions ? (
+            <>
+              <Typography variant="h6" gutterBottom>
+                N-Dimensional Dataset Selected
+              </Typography>
+              <Typography>
+                Use the controls in the left sidebar to extract a 1D slice from the selected dataset
+                and add it to the plot.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography variant="h6" gutterBottom>
+                No Series Added
+              </Typography>
+              <Typography>
+                Use the controls in the left sidebar to add datasets or slices to create a plot.
+              </Typography>
+            </>
+          )}
+        </Box>
       )}
-      
-      {plotData.length === 0 && !loading && !showNDimOptions && (
-        <div className="no-data">
-          <p>Add datasets or heatmap slices to create a plot</p>
-        </div>
-      )}
-      
-      {plotData.length === 0 && !loading && showNDimOptions && (
-        <div className="no-data">
-          <p>Configure the slice settings for the selected {selectedDataset?.path} dataset and click "Add to Plot"</p>
-        </div>
-      )}
-    </div>
+    </Box>
   );
 };
 
