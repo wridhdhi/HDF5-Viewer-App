@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Paper, Dialog, Fade, Backdrop, Typography } from '@mui/material';
+import { Dialog, Fade, Backdrop, Box } from '@mui/material';
 import AppNavbar from '../components/AppNavbar';
 import PlotTypeSidebar from '../components/PlotTypeSidebar';
 import PlotControlsSidebar from '../components/PlotControlsSidebar';
@@ -16,7 +16,6 @@ const HomePage: React.FC = () => {
   const [status, setStatus] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
   
-  // Lift state up for HeatmapPlot
   const [heatmapSettings, setHeatmapSettings] = useState<PlotSettings>({
     xAxis: 0,
     yAxis: 1,
@@ -26,34 +25,26 @@ const HomePage: React.FC = () => {
     yTicksDataset: ''
   });
   
-  // Lift state up for Series1DPlot
   const [seriesSettings, setSeriesSettings] = useState<Series1DSettings[]>([]);
   const [showNDimOptions, setShowNDimOptions] = useState(false);
   const [sliceAxis, setSliceAxis] = useState<number>(0);
   const [sliceSettings, setSliceSettings] = useState<Record<string, number>>({});
 
-  // References to the plot components for saving the plot
   const heatmapPlotRef = useRef<any>(null);
   const seriesPlotRef = useRef<any>(null);
 
-  // Function to handle saving the plot as PNG
   const handleSavePlot = () => {
     if (selectedDataset) {
       try {
         const plotName = selectedDataset.path.split('/').pop() || 'plot';
-        
-        // Create a custom filename
         const timestamp = new Date().toISOString().replace(/[:T.]/g, '-').slice(0, -5);
         const filename = `${plotName}_${timestamp}`;
-        
-        // Get the Plotly div element
         const plotElement = document.querySelector('.js-plotly-plot') as HTMLElement;
         
         if (!plotElement) {
           throw new Error("Plot element not found");
         }
         
-        // Access the global Plotly object and use it to download the image
         if (window.Plotly) {
           window.Plotly.downloadImage(plotElement, {
             format: 'png',
@@ -101,10 +92,8 @@ const HomePage: React.FC = () => {
       type: 'info'
     });
     
-    // Reset the series settings when a new dataset is selected
     setSeriesSettings([]);
     
-    // Initialize heatmap settings for the new dataset
     if (dataset.shape && dataset.shape.length >= 2) {
       const newHeatmapSettings = { ...heatmapSettings };
       
@@ -116,7 +105,6 @@ const HomePage: React.FC = () => {
         newHeatmapSettings.yAxis = 1;
       }
       
-      // Initialize slices for dimensions beyond x and y
       const newSlices: Record<string, number> = {};
       for (let i = 0; i < dataset.shape.length; i++) {
         if (i !== newHeatmapSettings.xAxis && i !== newHeatmapSettings.yAxis) {
@@ -127,17 +115,12 @@ const HomePage: React.FC = () => {
       setHeatmapSettings(newHeatmapSettings);
     }
     
-    // Initialize slice settings for 1D slices
     if (dataset.shape && dataset.shape.length > 1) {
       setShowNDimOptions(true);
-      
-      // Set slice axis to 0 by default
       setSliceAxis(0);
-      
-      // Initialize slice settings for each dimension
       const newSliceSettings: Record<string, number> = {};
       for (let i = 0; i < dataset.shape.length; i++) {
-        if (i !== 0) { // Not the slice axis
+        if (i !== 0) {
           newSliceSettings[i.toString()] = Math.floor(dataset.shape[i] / 2);
         }
       }
@@ -148,7 +131,6 @@ const HomePage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Clear error status after 5 seconds
     if (status?.type === 'error') {
       const timer = setTimeout(() => {
         setStatus(null);
@@ -157,10 +139,9 @@ const HomePage: React.FC = () => {
     }
   }, [status]);
 
-  // Determine what content to show in the plot controls sidebar
   const renderPlotControls = () => {
     if (!file || !selectedDataset) {
-      return null; // The sidebar will show the default message
+      return null;
     }
 
     if (activeTab === 'heatmap' && selectedDataset.shape && selectedDataset.shape.length >= 2) {
@@ -171,7 +152,6 @@ const HomePage: React.FC = () => {
           allDatasets={file.structure}
           setStatus={setStatus}
           controlsOnly={true}
-          // Pass the shared state and setters
           plotSettings={heatmapSettings}
           setPlotSettings={setHeatmapSettings}
         />
@@ -184,7 +164,6 @@ const HomePage: React.FC = () => {
           selectedDataset={selectedDataset}
           setStatus={setStatus}
           controlsOnly={true}
-          // Pass the shared state and setters
           seriesSettings={seriesSettings}
           setSeriesSettings={setSeriesSettings}
           showNDimOptions={showNDimOptions}
@@ -199,33 +178,24 @@ const HomePage: React.FC = () => {
     return null;
   };
 
-  // Get dataset info for status bar
   const getDatasetInfo = () => {
     if (!selectedDataset) return '';
     const shape = selectedDataset.shape ? `[${selectedDataset.shape.join(', ')}]` : '';
     return `${selectedDataset.path} ${shape}`;
   };
 
-  // Calculate dimensions for layout
-  const navbarHeight = '56px';
-  const sidebarWidth = '280px';
-  const statusBarHeight = '34px';
+  const navbarHeight = '80px';
+  const sidebarWidth = '300px';
+  const statusBarHeight = '40px';
 
   return (
-    <Box sx={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      overflow: 'hidden',
-      bgcolor: '#fafafa'
-    }}>
+    <div className="govuk-template__body">
       <AppNavbar 
         title="HDF5 Heatmap Viewer" 
         onFileUpload={() => setUploadDialogOpen(true)} 
         onSavePlot={selectedDataset ? handleSavePlot : undefined}
       />
       
-      {/* Upload Dialog */}
       <Dialog
         open={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
@@ -238,161 +208,129 @@ const HomePage: React.FC = () => {
         }}
       >
         <Fade in={uploadDialogOpen}>
-          <Box sx={{ p: 3 }}>
+          <div className="govuk-width-container govuk-!-padding-4">
             <FileUploader onFileUploaded={handleFileUploaded} />
-          </Box>
+          </div>
         </Fade>
       </Dialog>
       
-      {/* Left Sidebar (Plot Controls) */}
-      <Paper
-        square
-        elevation={1}
-        sx={{
-          position: 'fixed',
-          top: navbarHeight,
-          left: 0,
-          bottom: statusBarHeight,
-          width: sidebarWidth,
-          borderRight: '1px solid #e0e0e0',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 100,
-          overflow: 'auto'
-        }}
-      >
-        <PlotControlsSidebar activeTab={activeTab}>
-          {renderPlotControls()}
-        </PlotControlsSidebar>
-      </Paper>
-      
-      {/* Right Sidebar (Dataset Selection) */}
-      <Paper
-        square
-        elevation={1}
-        sx={{
-          position: 'fixed',
-          top: navbarHeight,
-          right: 0,
-          bottom: statusBarHeight,
-          width: sidebarWidth,
-          borderLeft: '1px solid #e0e0e0',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 100,
-          overflow: 'hidden'
-        }}
-      >
-        <PlotTypeSidebar 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          file={file}
-          datasets={file?.structure || null}
-          onSelectDataset={handleSelectDataset}
-          filterDimensions={activeTab === 'heatmap' ? 2 : undefined}
-        />
-      </Paper>
-      
-      {/* Main Content Area */}
-      <Box
-        sx={{
-          marginTop: navbarHeight,
-          marginLeft: sidebarWidth,
-          marginRight: sidebarWidth,
-          marginBottom: statusBarHeight,
-          padding: 3,
-          flex: 1,
-          overflow: 'auto',
-          backgroundColor: '#ffffff',
-          boxShadow: 'inset 0 0 5px rgba(0,0,0,0.05)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: `calc(100vh - ${navbarHeight} - ${statusBarHeight})`,
-          boxSizing: 'border-box'
-        }}
-      >
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            width: '100%', 
-            height: '100%',
-            borderRadius: 1,
-            overflow: 'hidden',
+      <div className="govuk-width-container">
+        <main className="govuk-main-wrapper" style={{ padding: 0 }}>
+          <div className="app-pane app-pane--enabled" style={{ 
             display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          {file ? (
-            <Box sx={{ height: '100%', flex: 1 }}>
-              {activeTab === 'heatmap' && (
-                selectedDataset && selectedDataset.shape && selectedDataset.shape.length >= 2 ? (
-                  <HeatmapPlot 
-                    filePath={file.path} 
-                    dataset={selectedDataset}
-                    allDatasets={file.structure}
-                    setStatus={setStatus}
-                    controlsOnly={false}
-                    // Pass the shared state
-                    plotSettings={heatmapSettings}
-                    setPlotSettings={setHeatmapSettings}
-                  />
+            height: `calc(100vh - ${navbarHeight} - ${statusBarHeight})`,
+            marginTop: navbarHeight,
+            marginBottom: statusBarHeight
+          }}>
+            <div 
+              className="app-pane__side-bar govuk-!-padding-2" 
+              style={{
+                width: sidebarWidth,
+                borderRight: '1px solid #b1b4b6',
+                overflow: 'auto',
+                backgroundColor: '#f3f2f1'
+              }}
+            >
+              <PlotControlsSidebar activeTab={activeTab}>
+                {renderPlotControls()}
+              </PlotControlsSidebar>
+            </div>
+            
+            <div 
+              className="app-pane__content govuk-!-padding-4" 
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                backgroundColor: '#ffffff',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <div 
+                className="govuk-!-margin-bottom-0"
+                style={{ 
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#ffffff',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {file ? (
+                  <div style={{ height: '100%', flex: 1 }}>
+                    {activeTab === 'heatmap' && (
+                      selectedDataset && selectedDataset.shape && selectedDataset.shape.length >= 2 ? (
+                        <HeatmapPlot 
+                          filePath={file.path} 
+                          dataset={selectedDataset}
+                          allDatasets={file.structure}
+                          setStatus={setStatus}
+                          controlsOnly={false}
+                          plotSettings={heatmapSettings}
+                          setPlotSettings={setHeatmapSettings}
+                        />
+                      ) : (
+                        <div className="govuk-!-padding-6 govuk-!-margin-top-9 govuk-!-text-align-center">
+                          <h2 className="govuk-heading-m">No 2D+ Dataset Selected</h2>
+                          <p className="govuk-body">
+                            Select a multi-dimensional dataset (2D or higher) from the list to visualize it as a heatmap.
+                          </p>
+                        </div>
+                      )
+                    )}
+                    
+                    {activeTab === 'series1d' && (
+                      <Series1DPlot
+                        filePath={file.path}
+                        allDatasets={file.structure}
+                        selectedDataset={selectedDataset}
+                        setStatus={setStatus}
+                        controlsOnly={false}
+                        seriesSettings={seriesSettings}
+                        setSeriesSettings={setSeriesSettings}
+                        showNDimOptions={showNDimOptions}
+                        sliceAxis={sliceAxis}
+                        setSliceAxis={setSliceAxis}
+                        sliceSettings={sliceSettings}
+                        setSliceSettings={setSliceSettings}
+                      />
+                    )}
+                  </div>
                 ) : (
-                  <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    color: 'text.secondary',
-                    p: 3
-                  }}>
-                    <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
-                      <h2>No 2D+ Dataset Selected</h2>
-                      <p>
-                        Select a multi-dimensional dataset (2D or higher) from the list to visualize it as a heatmap.
-                      </p>
-                    </Box>
-                  </Box>
-                )
-              )}
-              
-              {activeTab === 'series1d' && (
-                <Series1DPlot
-                  filePath={file.path}
-                  allDatasets={file.structure}
-                  selectedDataset={selectedDataset}
-                  setStatus={setStatus}
-                  controlsOnly={false}
-                  // Pass the shared state
-                  seriesSettings={seriesSettings}
-                  setSeriesSettings={setSeriesSettings}
-                  showNDimOptions={showNDimOptions}
-                  sliceAxis={sliceAxis}
-                  setSliceAxis={setSliceAxis}
-                  sliceSettings={sliceSettings}
-                  setSliceSettings={setSliceSettings}
-                />
-              )}
-            </Box>
-          ) : (
-            <Box sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              p: 3
-            }}>
-              <FileUploader onFileUploaded={handleFileUploaded} />
-            </Box>
-          )}
-        </Paper>
-      </Box>
+                  <div className="govuk-!-padding-6">
+                    <FileUploader onFileUploaded={handleFileUploaded} />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div 
+              className="app-pane__side-bar govuk-!-padding-2" 
+              style={{
+                width: sidebarWidth,
+                borderLeft: '1px solid #b1b4b6',
+                overflow: 'auto',
+                backgroundColor: '#f3f2f1'
+              }}
+            >
+              <PlotTypeSidebar 
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                file={file}
+                datasets={file?.structure || null}
+                onSelectDataset={handleSelectDataset}
+                filterDimensions={activeTab === 'heatmap' ? 2 : undefined}
+              />
+            </div>
+          </div>
+        </main>
+      </div>
       
-      {/* Status Bar */}
       <StatusBar status={status} datasetInfo={getDatasetInfo()} />
-    </Box>
+    </div>
   );
 };
 

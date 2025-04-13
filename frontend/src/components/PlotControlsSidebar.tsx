@@ -1,10 +1,5 @@
 import React from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper,
-  Divider
-} from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 interface PlotControlsSidebarProps {
   activeTab: 'heatmap' | 'series1d';
@@ -13,33 +8,23 @@ interface PlotControlsSidebarProps {
 
 const PlotControlsSidebar: React.FC<PlotControlsSidebarProps> = ({ activeTab, children }) => {
   return (
-    <Box
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}
-    >
-      <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-        <Typography variant="h6">
-          {activeTab === 'heatmap' ? 'Heatmap Controls' : '1D Series Controls'}
-        </Typography>
-      </Box>
+    <div className="govuk-width-container">
+      <div className="govuk-heading-m">
+        {activeTab === 'heatmap' ? 'Heatmap Controls' : '1D Series Controls'}
+      </div>
       
-      <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }}>
+      <div className="govuk-!-padding-bottom-6">
         {children || (
-          <Typography color="text.secondary">
+          <p className="govuk-body">
             Select a dataset to configure plot options
-          </Typography>
+          </p>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 
-// Material UI styled Accordion for plot controls
+// GOV.UK styled Accordion for plot controls
 export const ControlAccordion: React.FC<{
   title: string;
   icon?: React.ReactNode;
@@ -47,43 +32,34 @@ export const ControlAccordion: React.FC<{
   children: React.ReactNode;
 }> = ({ title, icon, defaultExpanded = false, children }) => {
   const [expanded, setExpanded] = React.useState(defaultExpanded);
+  const accordionId = `accordion-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        mb: 2,
-        border: '1px solid #e0e0e0',
-        borderRadius: 1,
-        overflow: 'hidden'
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          p: 1.5,
-          backgroundColor: '#f5f5f5',
-          cursor: 'pointer',
-          borderBottom: expanded ? '1px solid #e0e0e0' : 'none'
-        }}
-        onClick={() => setExpanded(!expanded)}
-      >
-        {icon && <Box sx={{ mr: 1.5 }}>{icon}</Box>}
-        <Typography variant="subtitle1" fontWeight="medium">
-          {title}
-        </Typography>
-        <Box sx={{ ml: 'auto' }}>
-          {expanded ? '−' : '+'}
-        </Box>
-      </Box>
-      
-      {expanded && (
-        <Box sx={{ p: 2 }}>
+    <div className="govuk-accordion" data-module="govuk-accordion" id={accordionId}>
+      <div className="govuk-accordion__section">
+        <div className="govuk-accordion__section-header">
+          <h2 className="govuk-accordion__section-heading">
+            <span 
+              className="govuk-accordion__section-button" 
+              id={`${accordionId}-heading`}
+              onClick={() => setExpanded(!expanded)}
+              style={{ cursor: 'pointer' }}
+            >
+              {icon && <span className="govuk-!-margin-right-2">{icon}</span>}
+              {title}
+            </span>
+          </h2>
+        </div>
+        
+        <div 
+          id={`${accordionId}-content`} 
+          className={`govuk-accordion__section-content ${expanded ? '' : 'govuk-!-display-none'}`}
+          aria-labelledby={`${accordionId}-heading`}
+        >
           {children}
-        </Box>
-      )}
-    </Paper>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -14,5 +14,8 @@ declare global {
         }
       ) => void;
     }
+    GOVUKFrontend?: {
+      initAll: () => void;
+    };
   }
 }

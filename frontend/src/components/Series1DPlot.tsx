@@ -22,7 +22,7 @@ import {
   CardContent
 } from '@mui/material';
 
-// Fix the icon imports
+// Material-UI icon imports
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShowChartIcon from '@mui/icons-material/ShowChart';

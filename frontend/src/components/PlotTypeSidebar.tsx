@@ -1,11 +1,4 @@
 import React from 'react';
-import { 
-  Box, 
-  Typography, 
-  Tabs, 
-  Tab, 
-  Divider
-} from '@mui/material';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import DatasetList from './DatasetList';
@@ -28,64 +21,73 @@ const PlotTypeSidebar: React.FC<PlotTypeSidebarProps> = ({
   onSelectDataset,
   filterDimensions
 }) => {
-  const handleTabChange = (event: React.SyntheticEvent, newValue: 'heatmap' | 'series1d') => {
-    onTabChange(newValue);
+  const handleTabChange = (tab: 'heatmap' | 'series1d') => {
+    onTabChange(tab);
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        variant="fullWidth"
-        sx={{ 
-          minHeight: '48px',
-          borderBottom: 1, 
-          borderColor: 'divider',
-          '& .MuiTab-root': {
-            minHeight: '48px',
-            textTransform: 'none',
-            fontSize: '0.875rem'
-          }
-        }}
-      >
-        <Tab 
-          icon={<GridOnIcon sx={{ fontSize: 20 }} />} 
-          iconPosition="start"
-          label="Heatmap" 
-          value="heatmap"
-        />
-        <Tab 
-          icon={<ShowChartIcon sx={{ fontSize: 20 }} />} 
-          iconPosition="start"
-          label="1D Series" 
-          value="series1d"
-        />
-      </Tabs>
+    <div className="govuk-grid-column-full">
+      <div className="govuk-tabs" data-module="govuk-tabs">
+        <ul className="govuk-tabs__list">
+          <li className={`govuk-tabs__list-item ${activeTab === 'heatmap' ? 'govuk-tabs__list-item--selected' : ''}`}>
+            <a 
+              className="govuk-tabs__tab" 
+              href="#heatmap"
+              onClick={(e) => {
+                e.preventDefault();
+                handleTabChange('heatmap');
+              }}
+            >
+              <span className="govuk-!-margin-right-1">
+                <GridOnIcon fontSize="small" />
+              </span>
+              Heatmap
+            </a>
+          </li>
+          <li className={`govuk-tabs__list-item ${activeTab === 'series1d' ? 'govuk-tabs__list-item--selected' : ''}`}>
+            <a 
+              className="govuk-tabs__tab" 
+              href="#series1d"
+              onClick={(e) => {
+                e.preventDefault();
+                handleTabChange('series1d');
+              }}
+            >
+              <span className="govuk-!-margin-right-1">
+                <ShowChartIcon fontSize="small" />
+              </span>
+              1D Series
+            </a>
+          </li>
+        </ul>
 
-      <Box sx={{ p: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Typography 
-          variant="subtitle1" 
-          sx={{ 
-            mb: 2, 
-            fontWeight: 500,
-            fontSize: '0.875rem',
-            color: 'text.primary' 
-          }}
-        >
-          {activeTab === 'heatmap' ? 'Select a 2D+ dataset' : 'Select a dataset'}
-        </Typography>
-        
-        <Box sx={{ overflow: 'auto', flex: 1 }}>
-          <DatasetList 
-            datasets={datasets} 
-            onSelectDataset={onSelectDataset} 
-            filterDimensions={filterDimensions}
-            selectedDataset={null}
-          />
-        </Box>
-      </Box>
-    </Box>
+        <div className="govuk-tabs__panel" id="heatmap" 
+          style={{ display: activeTab === 'heatmap' ? 'block' : 'none' }}>
+          <h2 className="govuk-heading-s">Select a 2D+ dataset</h2>
+          <div className="govuk-!-margin-bottom-6">
+            <DatasetList 
+              datasets={datasets} 
+              onSelectDataset={onSelectDataset} 
+              filterDimensions={filterDimensions}
+              selectedDataset={null}
+            />
+          </div>
+        </div>
+
+        <div className="govuk-tabs__panel" id="series1d" 
+          style={{ display: activeTab === 'series1d' ? 'block' : 'none' }}>
+          <h2 className="govuk-heading-s">Select a dataset</h2>
+          <div className="govuk-!-margin-bottom-6">
+            <DatasetList 
+              datasets={datasets} 
+              onSelectDataset={onSelectDataset} 
+              filterDimensions={undefined}
+              selectedDataset={null}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

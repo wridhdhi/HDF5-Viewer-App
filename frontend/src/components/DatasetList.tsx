@@ -1,16 +1,4 @@
 import React from 'react';
-import { 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemText, 
-  ListItemIcon,
-  Paper,
-  Typography,
-  Box,
-  Chip,
-  Divider
-} from '@mui/material';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import FolderIcon from '@mui/icons-material/Folder';
 import { Dataset } from '../types';
@@ -30,11 +18,9 @@ const DatasetList: React.FC<DatasetListProps> = ({
 }) => {
   if (!datasets) {
     return (
-      <Box sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-        <Typography variant="body2">
-          No file loaded. Please upload an HDF5 file.
-        </Typography>
-      </Box>
+      <div className="govuk-body govuk-!-text-align-center govuk-!-padding-top-6 govuk-!-padding-bottom-6">
+        No file loaded. Please upload an HDF5 file.
+      </div>
     );
   }
 
@@ -47,14 +33,12 @@ const DatasetList: React.FC<DatasetListProps> = ({
 
   if (filteredDatasets.length === 0) {
     return (
-      <Box sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-        <Typography variant="body2">
-          No suitable datasets found in this file.
-          {filterDimensions && (
-            <span> Looking for datasets with {filterDimensions}+ dimensions.</span>
-          )}
-        </Typography>
-      </Box>
+      <div className="govuk-body govuk-!-text-align-center govuk-!-padding-top-6 govuk-!-padding-bottom-6">
+        No suitable datasets found in this file.
+        {filterDimensions && (
+          <span> Looking for datasets with {filterDimensions}+ dimensions.</span>
+        )}
+      </div>
     );
   }
 
@@ -76,108 +60,60 @@ const DatasetList: React.FC<DatasetListProps> = ({
   };
 
   return (
-    <List dense disablePadding sx={{ width: '100%' }}>
+    <div className="govuk-!-margin-bottom-6">
       {Object.entries(groupedDatasets).map(([groupPath, datasets], index) => (
         <React.Fragment key={groupPath}>
-          {index > 0 && <Divider sx={{ my: 1 }} />}
+          {index > 0 && <hr className="govuk-section-break govuk-section-break--m govuk-section-break--visible" />}
           
-          <ListItem dense disablePadding>
-            <ListItemIcon sx={{ minWidth: 36 }}>
-              <FolderIcon color="primary" fontSize="small" />
-            </ListItemIcon>
-            <ListItemText 
-              primary={groupPath === '/' ? 'Root' : groupPath}
-              primaryTypographyProps={{
-                variant: 'body2',
-                fontWeight: 'medium',
-                color: 'primary'
-              }}
-            />
-          </ListItem>
+          <div className="govuk-!-margin-bottom-2">
+            <strong className="govuk-tag govuk-tag--blue govuk-!-margin-right-1">
+              <FolderIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }} />
+              {groupPath === '/' ? 'Root' : groupPath}
+            </strong>
+          </div>
           
-          {datasets.map(dataset => (
-            <ListItemButton
-              key={dataset.path}
-              selected={isSelected(dataset)}
-              onClick={() => onSelectDataset(dataset)}
-              dense
-              sx={{ 
-                pl: 4,
-                borderRadius: 1,
-                my: 0.5,
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.light',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    backgroundColor: 'primary.main',
-                  }
-                }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                <TableChartIcon fontSize="small" 
-                  sx={{ 
-                    color: isSelected(dataset) ? 'primary.contrastText' : 'inherit'
-                  }} 
-                />
-              </ListItemIcon>
-              <ListItemText
-                primary={dataset.path.split('/').pop()}
-                secondary={
-                  <Box component="span" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {dataset.shape && (
-                      <Chip 
-                        label={`${dataset.shape.join(' × ')}`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          height: 20,
-                          '& .MuiChip-label': { 
-                            px: 1,
-                            fontSize: '0.675rem',
-                            color: isSelected(dataset) ? 'primary.contrastText' : 'text.secondary'
-                          },
-                          borderColor: isSelected(dataset) ? 'primary.contrastText' : 'divider'
-                        }}
-                      />
-                    )}
-                    {dataset.dtype && (
-                      <Chip 
-                        label={dataset.dtype}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          height: 20,
-                          '& .MuiChip-label': { 
-                            px: 1,
-                            fontSize: '0.675rem',
-                            color: isSelected(dataset) ? 'primary.contrastText' : 'text.secondary'
-                          },
-                          borderColor: isSelected(dataset) ? 'primary.contrastText' : 'divider'
-                        }}
-                      />
-                    )}
-                  </Box>
-                }
-                primaryTypographyProps={{
-                  variant: 'body2',
-                  sx: { 
-                    fontWeight: isSelected(dataset) ? 'medium' : 'regular',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }
+          <ul className="govuk-list">
+            {datasets.map(dataset => (
+              <li 
+                key={dataset.path}
+                className={`govuk-!-padding-2 govuk-!-margin-bottom-1 ${isSelected(dataset) ? 'govuk-!-background-colour-blue govuk-!-font-weight-bold' : ''}`}
+                style={{ 
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  borderLeft: isSelected(dataset) ? '4px solid #1d70b8' : '4px solid transparent' 
                 }}
-                secondaryTypographyProps={{
-                  variant: 'body2',
-                  sx: { mt: 0.5 }
-                }}
-              />
-            </ListItemButton>
-          ))}
+                onClick={() => onSelectDataset(dataset)}
+              >
+                <div className="govuk-grid-row">
+                  <div className="govuk-grid-column-three-quarters">
+                    <span className={isSelected(dataset) ? 'govuk-!-color-white' : ''}>
+                      <TableChartIcon style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 8 }} />
+                      {dataset.path.split('/').pop()}
+                    </span>
+                  </div>
+                  <div className="govuk-grid-column-one-quarter">
+                    <div className="govuk-!-text-align-right">
+                      {dataset.shape && (
+                        <span className={`govuk-tag govuk-tag--grey ${isSelected(dataset) ? 'govuk-!-color-white' : ''}`} style={{ fontSize: '0.8rem' }}>
+                          {dataset.shape.join(' × ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {dataset.dtype && (
+                  <div className="govuk-body-s govuk-!-margin-bottom-0 govuk-!-margin-top-1" style={{ paddingLeft: '24px' }}>
+                    <span className={`govuk-tag govuk-tag--green ${isSelected(dataset) ? 'govuk-!-color-white' : ''}`} style={{ fontSize: '0.7rem' }}>
+                      {dataset.dtype}
+                    </span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </React.Fragment>
       ))}
-    </List>
+    </div>
   );
 };
 

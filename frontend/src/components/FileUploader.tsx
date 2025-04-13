@@ -1,11 +1,4 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  CircularProgress,
-  Alert
-} from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { uploadFile } from '../services/api';
 import { HDF5File } from '../types';
@@ -96,58 +89,52 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
   };
 
   return (
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>Upload HDF5 File</Typography>
+    <div className="govuk-!-margin-bottom-6">
+      <h2 className="govuk-heading-m">Upload HDF5 File</h2>
       
-      <Paper
-        elevation={0}
-        sx={{
-          border: dragActive ? '2px dashed #1976d2' : '2px dashed #bbbbbb',
-          borderRadius: 1,
-          p: 4,
+      <div 
+        className={`govuk-file-upload__area ${dragActive ? 'govuk-file-upload__area--dragover' : ''}`}
+        style={{
+          border: dragActive ? '2px dashed #1d70b8' : '2px dashed #b1b4b6',
+          padding: '30px',
           textAlign: 'center',
-          backgroundColor: dragActive ? '#f0f7ff' : '#fafafa',
+          backgroundColor: dragActive ? '#f3f2f1' : '#ffffff',
           cursor: 'pointer',
-          transition: 'all 0.2s',
+          borderRadius: '4px',
+          margin: '20px 0'
         }}
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
       >
-        <CloudUploadIcon 
-          sx={{ 
-            fontSize: 48, 
-            color: dragActive ? '#1976d2' : '#757575',
-            mb: 2
-          }} 
-        />
+        <div className="govuk-!-margin-bottom-4">
+          <CloudUploadIcon 
+            style={{ 
+              fontSize: 48, 
+              color: dragActive ? '#1d70b8' : '#505a5f',
+              marginBottom: '16px'
+            }} 
+          />
 
-        <Typography variant="body1" sx={{ mb: 1 }}>
-          Drag and drop your HDF5 file here, or
-          <Box
-            component="label"
-            htmlFor="file-uploader-input"
-            sx={{ 
-              color: '#1976d2',
-              cursor: 'pointer',
-              fontWeight: 'medium',
-              ml: 0.5,
-              '&:hover': {
-                textDecoration: 'underline'
-              }
-            }}
-          >
-            browse to upload
-          </Box>
-        </Typography>
+          <p className="govuk-body">
+            Drag and drop your HDF5 file here, or
+            <label
+              htmlFor="file-uploader-input"
+              className="govuk-link govuk-!-margin-left-1"
+              style={{ cursor: 'pointer' }}
+            >
+              browse to upload
+            </label>
+          </p>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Accepted file types: .h5, .hdf5
-        </Typography>
+          <p className="govuk-body-s govuk-!-margin-bottom-0" style={{ color: '#505a5f' }}>
+            Accepted file types: .h5, .hdf5
+          </p>
+        </div>
 
         <input
-          className="visually-hidden"
+          className="govuk-visually-hidden"
           id="file-uploader-input"
           type="file"
           accept=".h5,.hdf5"
@@ -155,21 +142,26 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
           onChange={handleFileInputChange}
           disabled={loading}
         />
-      </Paper>
+      </div>
       
       {loading && (
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-          <CircularProgress size={20} sx={{ mr: 1 }} />
-          <Typography>Uploading file... This may take a moment for large files.</Typography>
-        </Box>
+        <div className="govuk-inset-text">
+          <div className="loading-spinner" style={{ marginRight: '10px', display: 'inline-block', verticalAlign: 'middle' }}></div>
+          <span className="govuk-body">Uploading file... This may take a moment for large files.</span>
+        </div>
       )}
       
       {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
+        <div className="govuk-error-summary" role="alert" tabIndex={-1}>
+          <h2 className="govuk-error-summary__title">There is a problem</h2>
+          <div className="govuk-error-summary__body">
+            <ul className="govuk-list govuk-error-summary__list">
+              <li>{error}</li>
+            </ul>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 
