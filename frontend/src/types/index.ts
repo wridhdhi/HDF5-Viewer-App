@@ -23,6 +23,7 @@ export interface PlotSettings {
   colorscale: string;
   xTicksDataset: string;
   yTicksDataset: string;
+  plotImprovements?: PlotImprovementsSettings;
 }
 
 export interface Series1DSettings {

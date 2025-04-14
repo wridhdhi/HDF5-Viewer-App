@@ -516,7 +516,7 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
                     family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
                     size: plotSettings.plotImprovements?.fontSize || 16
                   },
-                  standoff: 15  // Add standoff to ensure better spacing for the x-axis title
+                  standoff: 20  // Increased standoff for better spacing between axis title and ticks
                 },
                 showgrid: true,
                 zeroline: true,
@@ -525,7 +525,9 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
                   size: plotSettings.plotImprovements?.tickSize || 12
                 },
                 ticks: 'inside',
-                tickwidth: plotSettings.plotImprovements?.tickThickness || 1
+                tickwidth: plotSettings.plotImprovements?.tickThickness || 1,
+                ticksuffix: '  ',  // Add space after tick labels
+                tickprefix: '  '   // Add space before tick labels
               },
               yaxis: {
                 title: {
@@ -534,7 +536,8 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
                   font: {
                     family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
                     size: plotSettings.plotImprovements?.fontSize || 16
-                  }
+                  },
+                  standoff: 20  // Increased standoff for better spacing between axis title and ticks
                 },
                 showgrid: true,
                 zeroline: true,
@@ -543,7 +546,9 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
                   size: plotSettings.plotImprovements?.tickSize || 12
                 },
                 ticks: 'inside',
-                tickwidth: plotSettings.plotImprovements?.tickThickness || 1
+                tickwidth: plotSettings.plotImprovements?.tickThickness || 1,
+                ticksuffix: '  ',  // Add space after tick labels
+                tickprefix: '  '   // Add space before tick labels
               },
               coloraxis: {
                 colorbar: {
@@ -567,7 +572,10 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
                 x: plotSettings.plotImprovements?.legendPosition?.includes('right') ? 1 : 0,
                 y: plotSettings.plotImprovements?.legendPosition?.includes('top') ? 1 : 0,
                 xanchor: plotSettings.plotImprovements?.legendPosition?.includes('right') ? 'right' : 'left',
-                yanchor: plotSettings.plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom'
+                yanchor: plotSettings.plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom',
+                bordercolor: 'rgba(0,0,0,0.3)',
+                borderwidth: 1,
+                bgcolor: 'rgba(255,255,255,0.9)'
               },
               ...(plotSettings.plotImprovements?.showBorder && {
                 plot_bgcolor: 'white',

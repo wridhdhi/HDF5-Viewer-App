@@ -87,6 +87,9 @@ interface Series1DPlotProps {
   setSliceSettings?: (settings: Record<string, number>) => void;
   plotImprovements?: PlotImprovementsSettings;
   setPlotImprovements?: (settings: PlotImprovementsSettings) => void;
+  // Renamed parameters to match HomePage
+  seriesPlotImprovements?: PlotImprovementsSettings;
+  setSeriesPlotImprovements?: (settings: PlotImprovementsSettings) => void;
 }
 
 // Helper function to calculate statistics for a data array
@@ -127,7 +130,9 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
   sliceSettings: externalSliceSettings,
   setSliceSettings: setExternalSliceSettings,
   plotImprovements: externalPlotImprovements,
-  setPlotImprovements: setExternalPlotImprovements
+  setPlotImprovements: setExternalPlotImprovements,
+  seriesPlotImprovements: externalSeriesPlotImprovements,
+  setSeriesPlotImprovements: externalSetSeriesPlotImprovements
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,8 +155,10 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
   const setSliceAxis = setExternalSliceAxis || setInternalSliceAxis;
   const sliceSettings = externalSliceSettings || internalSliceSettings;
   const setSliceSettings = setExternalSliceSettings || setInternalSliceSettings;
-  const plotImprovements = externalPlotImprovements || internalPlotImprovements;
-  const setPlotImprovements = setExternalPlotImprovements || setInternalPlotImprovements;
+  
+  // Prioritize seriesPlotImprovements from HomePage over others
+  const plotImprovements = externalSeriesPlotImprovements || externalPlotImprovements || internalPlotImprovements;
+  const setPlotImprovements = externalSetSeriesPlotImprovements || setExternalPlotImprovements || setInternalPlotImprovements;
 
   // Available plot types
   const plotTypes: PlotType[] = ['scatter', 'line', 'line+marker'];
@@ -769,7 +776,7 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
                       family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
                       size: plotImprovements?.fontSize || 16
                     },
-                    standoff: 15  // Add standoff to ensure better spacing for the x-axis title
+                    standoff: 20  // Add standoff to ensure better spacing for the x-axis title
                   },
                   showgrid: true,
                   zeroline: true,
@@ -778,7 +785,9 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
                     size: plotImprovements?.tickSize || 12
                   },
                   ticks: 'inside',
-                  tickwidth: plotImprovements?.tickThickness || 1
+                  tickwidth: plotImprovements?.tickThickness || 1,
+                  ticksuffix: '  ',  // Add space after tick labels
+                  tickprefix: '  '   // Add space before tick labels
                 },
                 yaxis: {
                   title: {
@@ -786,7 +795,8 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
                     font: {
                       family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
                       size: plotImprovements?.fontSize || 16
-                    }
+                    },
+                    standoff: 20  // Add standoff to ensure better spacing for the x-axis title
                   },
                   showgrid: true,
                   zeroline: true,
@@ -795,7 +805,9 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
                     size: plotImprovements?.tickSize || 12
                   },
                   ticks: 'inside',
-                  tickwidth: plotImprovements?.tickThickness || 1
+                  tickwidth: plotImprovements?.tickThickness || 1,
+                  ticksuffix: '  ',  // Add space after tick labels
+                  tickprefix: '  '   // Add space before tick labels
                 },
                 legend: {
                   font: {
@@ -805,7 +817,10 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
                   x: plotImprovements?.legendPosition?.includes('right') ? 1 : 0,
                   y: plotImprovements?.legendPosition?.includes('top') ? 1 : 0,
                   xanchor: plotImprovements?.legendPosition?.includes('right') ? 'right' : 'left',
-                  yanchor: plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom'
+                  yanchor: plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom',
+                  bordercolor: 'rgba(0,0,0,0.3)',
+                  borderwidth: 1,
+                  bgcolor: 'rgba(255,255,255,0.9)'
                 },
                 ...(plotImprovements?.showBorder && {
                   plot_bgcolor: 'white',

@@ -7,7 +7,12 @@ import StatusBar from '../components/StatusBar';
 import HeatmapPlot from '../components/HeatmapPlot';
 import Series1DPlot from '../components/Series1DPlot';
 import FileUploader from '../components/FileUploader';
-import { Dataset, HDF5File, PlotSettings, Series1DSettings } from '../types';
+import { Dataset, HDF5File, PlotSettings, Series1DSettings, PlotImprovementsSettings } from '../types';
+
+const defaultPlotImprovements: PlotImprovementsSettings = {
+  smoothing: false,
+  interpolation: 'linear',
+};
 
 const HomePage: React.FC = () => {
   const [file, setFile] = useState<HDF5File | null>(null);
@@ -29,6 +34,7 @@ const HomePage: React.FC = () => {
   const [showNDimOptions, setShowNDimOptions] = useState(false);
   const [sliceAxis, setSliceAxis] = useState<number>(0);
   const [sliceSettings, setSliceSettings] = useState<Record<string, number>>({});
+  const [seriesPlotImprovements, setSeriesPlotImprovements] = useState<PlotImprovementsSettings>(defaultPlotImprovements);
 
   const heatmapPlotRef = useRef<any>(null);
   const seriesPlotRef = useRef<any>(null);
@@ -171,6 +177,8 @@ const HomePage: React.FC = () => {
           setSliceAxis={setSliceAxis}
           sliceSettings={sliceSettings}
           setSliceSettings={setSliceSettings}
+          seriesPlotImprovements={seriesPlotImprovements}
+          setSeriesPlotImprovements={setSeriesPlotImprovements}
         />
       );
     }
@@ -191,7 +199,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="govuk-template__body" style={{ width: '100vw', maxWidth: '100%', padding: 0, margin: 0, overflow: 'hidden' }}>
       <AppNavbar 
-        title="HDF5 Heatmap Viewer" 
+        title="HDF5 Viewer" 
         onFileUpload={() => setUploadDialogOpen(true)} 
         onSavePlot={selectedDataset ? handleSavePlot : undefined}
       />
@@ -312,6 +320,8 @@ const HomePage: React.FC = () => {
                           setSliceAxis={setSliceAxis}
                           sliceSettings={sliceSettings}
                           setSliceSettings={setSliceSettings}
+                          seriesPlotImprovements={seriesPlotImprovements}
+                          setSeriesPlotImprovements={setSeriesPlotImprovements}
                         />
                       </div>
                     )}
