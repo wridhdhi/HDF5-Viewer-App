@@ -55,9 +55,23 @@ const StatusBar: React.FC<StatusBarProps> = ({ status, datasetInfo }) => {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          maxWidth: '50%' // Limit to half the width
+          maxWidth: '30%' // Reduced to make room for copyright text
         }}>
           {status?.message || ''}
+        </div>
+        <div style={{ 
+          fontFamily: '"GDS Transport", Arial, sans-serif',
+          fontSize: '12px', // Reduced font size
+          fontWeight: 600, // Bold font
+          color: '#505a5f', // Grey color
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          textAlign: 'center',
+          flex: 1,
+          opacity: 0.5
+        }}>
+          Designed by Wridhdhisom Karar |  Quantum Circuits Group ©
         </div>
         <div style={{ 
           fontFamily: '"GDS Transport", Arial, sans-serif',
@@ -67,7 +81,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ status, datasetInfo }) => {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          maxWidth: '50%' // Limit to half the width
+          maxWidth: '30%' // Reduced to make room for copyright text
         }}>
           {datasetInfo || ''}
         </div>

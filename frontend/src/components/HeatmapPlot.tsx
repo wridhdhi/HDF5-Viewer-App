@@ -16,8 +16,9 @@ import GridOnIcon from '@mui/icons-material/GridOn';
 import PaletteIcon from '@mui/icons-material/Palette';
 import ViewSlider from '@mui/icons-material/ViewStream';
 import LabelIcon from '@mui/icons-material/Label';
+import FormatPaintIcon from '@mui/icons-material/FormatPaint';
 import { Dataset, PlotSettings, StatusMessage } from '../types';
-import { ControlAccordion } from './PlotControlsSidebar';
+import { ControlAccordion, PlotImprovements, PlotImprovementsSettings, defaultPlotImprovements } from './PlotControlsSidebar';
 
 const SliderContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -67,7 +68,8 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
     slices: {},
     colorscale: 'Viridis',
     xTicksDataset: '',
-    yTicksDataset: ''
+    yTicksDataset: '',
+    plotImprovements: defaultPlotImprovements
   });
   const [plotData, setPlotData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -426,6 +428,26 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
             </Select>
           </FormControl>
         </ControlAccordion>
+
+        <ControlAccordion 
+          title="Plot Improvements" 
+          icon={<FormatPaintIcon />}
+          defaultExpanded={false}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Customize plot appearance and improve visual presentation.
+          </Typography>
+          
+          <PlotImprovements 
+            settings={plotSettings.plotImprovements || defaultPlotImprovements}
+            onSettingsChange={(newImproveSettings) => {
+              setPlotSettings(prev => ({
+                ...prev,
+                plotImprovements: newImproveSettings
+              }));
+            }}
+          />
+        </ControlAccordion>
       </Box>
     );
   }
@@ -473,56 +495,100 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
             data={plotData}
             layout={{
               title: {
-                text: dataset.path.split('/').pop() || '',
+                text: plotSettings.plotImprovements?.titleText || dataset.path.split('/').pop() || '',
                 font: {
-                  family: 'Computer Modern, serif',
-                  size: 24
+                  family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                  size: plotSettings.plotImprovements?.fontSize || 24
                 }
               },
               autosize: true,
-              margin: { l: 50, r: 50, t: 60, b: 50 },
+              margin: { 
+                l: 50, 
+                r: 50, 
+                t: 60, 
+                b: 80  // Increased bottom margin to ensure x-label is visible above status bar
+              },
               xaxis: {
                 title: {
-                  text: `Dimension ${plotSettings.xAxis} ${plotSettings.xTicksDataset ? `(${plotSettings.xTicksDataset.split('/').pop()})` : ''}`,
+                  text: plotSettings.plotImprovements?.xAxisLabel || 
+                        `Dimension ${plotSettings.xAxis} ${plotSettings.xTicksDataset ? `(${plotSettings.xTicksDataset.split('/').pop()})` : ''}`,
                   font: {
-                    family: 'Computer Modern, serif',
-                    size: 16
-                  }
+                    family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotSettings.plotImprovements?.fontSize || 16
+                  },
+                  standoff: 15  // Add standoff to ensure better spacing for the x-axis title
                 },
                 showgrid: true,
                 zeroline: true,
                 tickfont: {
-                  family: 'Computer Modern, serif'
+                  family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                  size: plotSettings.plotImprovements?.tickSize || 12
                 },
-                ticks: 'inside'
+                ticks: 'inside',
+                tickwidth: plotSettings.plotImprovements?.tickThickness || 1
               },
               yaxis: {
                 title: {
-                  text: `Dimension ${plotSettings.yAxis} ${plotSettings.yTicksDataset ? `(${plotSettings.yTicksDataset.split('/').pop()})` : ''}`,
+                  text: plotSettings.plotImprovements?.yAxisLabel || 
+                        `Dimension ${plotSettings.yAxis} ${plotSettings.yTicksDataset ? `(${plotSettings.yTicksDataset.split('/').pop()})` : ''}`,
                   font: {
-                    family: 'Computer Modern, serif',
-                    size: 16
+                    family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotSettings.plotImprovements?.fontSize || 16
                   }
                 },
                 showgrid: true,
                 zeroline: true,
                 tickfont: {
-                  family: 'Computer Modern, serif'
+                  family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                  size: plotSettings.plotImprovements?.tickSize || 12
                 },
-                ticks: 'inside'
+                ticks: 'inside',
+                tickwidth: plotSettings.plotImprovements?.tickThickness || 1
               },
               coloraxis: {
                 colorbar: {
                   tickfont: {
-                    family: 'Computer Modern, serif'
+                    family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotSettings.plotImprovements?.tickSize || 12
                   },
                   title: {
                     font: {
-                      family: 'Computer Modern, serif'
+                      family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                      size: plotSettings.plotImprovements?.fontSize || 16
                     }
                   }
                 }
-              }
+              },
+              legend: {
+                font: {
+                  family: plotSettings.plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                  size: plotSettings.plotImprovements?.legendSize || 12
+                },
+                x: plotSettings.plotImprovements?.legendPosition?.includes('right') ? 1 : 0,
+                y: plotSettings.plotImprovements?.legendPosition?.includes('top') ? 1 : 0,
+                xanchor: plotSettings.plotImprovements?.legendPosition?.includes('right') ? 'right' : 'left',
+                yanchor: plotSettings.plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom'
+              },
+              ...(plotSettings.plotImprovements?.showBorder && {
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                shapes: [
+                  {
+                    type: 'rect',
+                    xref: 'paper',
+                    yref: 'paper',
+                    x0: 0,
+                    y0: 0,
+                    x1: 1,
+                    y1: 1,
+                    line: {
+                      color: 'black',
+                      width: 2
+                    },
+                    fillcolor: 'rgba(0,0,0,0)'
+                  }
+                ]
+              })
             }}
             config={{
               responsive: true,
@@ -537,7 +603,7 @@ const HeatmapPlot: React.FC<HeatmapPlotProps> = ({
             }}
             style={{ 
               width: '100%', 
-              height: '100%',
+              height: 'calc(100% - 28px)', // Adjust height to account for status bar (24px height + 4px border)
               position: 'absolute',
               top: 0,
               left: 0

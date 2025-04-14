@@ -30,8 +30,9 @@ import ViewStreamIcon from '@mui/icons-material/ViewStream';
 import FormatColorFillIcon from '@mui/icons-material/FormatColorFill';
 import TuneIcon from '@mui/icons-material/Tune';
 import SettingsIcon from '@mui/icons-material/Settings';
+import FormatPaintIcon from '@mui/icons-material/FormatPaint';
 
-import { ControlAccordion } from './PlotControlsSidebar';
+import { ControlAccordion, PlotImprovements, PlotImprovementsSettings, defaultPlotImprovements } from './PlotControlsSidebar';
 import { Dataset, PlotType, Series1DSettings, StatusMessage } from '../types';
 
 const ColorInput = styled('input')({
@@ -84,6 +85,8 @@ interface Series1DPlotProps {
   setSliceAxis?: (axis: number) => void;
   sliceSettings?: Record<string, number>;
   setSliceSettings?: (settings: Record<string, number>) => void;
+  plotImprovements?: PlotImprovementsSettings;
+  setPlotImprovements?: (settings: PlotImprovementsSettings) => void;
 }
 
 // Helper function to calculate statistics for a data array
@@ -122,7 +125,9 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
   sliceAxis: externalSliceAxis,
   setSliceAxis: setExternalSliceAxis,
   sliceSettings: externalSliceSettings,
-  setSliceSettings: setExternalSliceSettings
+  setSliceSettings: setExternalSliceSettings,
+  plotImprovements: externalPlotImprovements,
+  setPlotImprovements: setExternalPlotImprovements
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +139,7 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
   const [internalSliceAxis, setInternalSliceAxis] = useState<number>(0);
   const [internalSliceMaxDimension, setSliceMaxDimension] = useState<number>(0);
   const [internalSliceSettings, setInternalSliceSettings] = useState<Record<string, number>>({});
+  const [internalPlotImprovements, setInternalPlotImprovements] = useState<PlotImprovementsSettings>(defaultPlotImprovements);
   const [plotData, setPlotData] = useState<any[]>([]);
 
   // Use external state if provided, otherwise use internal state
@@ -144,6 +150,8 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
   const setSliceAxis = setExternalSliceAxis || setInternalSliceAxis;
   const sliceSettings = externalSliceSettings || internalSliceSettings;
   const setSliceSettings = setExternalSliceSettings || setInternalSliceSettings;
+  const plotImprovements = externalPlotImprovements || internalPlotImprovements;
+  const setPlotImprovements = setExternalPlotImprovements || setInternalPlotImprovements;
 
   // Available plot types
   const plotTypes: PlotType[] = ['scatter', 'line', 'line+marker'];
@@ -626,6 +634,24 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
             </Typography>
           )}
         </ControlAccordion>
+        
+        {/* Plot Improvements Accordion */}
+        <ControlAccordion 
+          title="Plot Improvements" 
+          icon={<FormatPaintIcon />}
+          defaultExpanded={false}
+        >
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Customize plot appearance and improve visual presentation.
+          </Typography>
+          
+          <PlotImprovements 
+            settings={plotImprovements}
+            onSettingsChange={(newSettings) => {
+              setPlotImprovements(newSettings);
+            }}
+          />
+        </ControlAccordion>
       </Box>
     );
   }
@@ -723,52 +749,84 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
               data={plotData}
               layout={{
                 title: {
-                  text: '1D Series Plot',
+                  text: plotImprovements?.titleText || '1D Series Plot',
                   font: {
-                    family: 'Computer Modern, serif',
-                    size: 24
+                    family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotImprovements?.fontSize || 24
                   }
                 },
                 autosize: true,
-                margin: { l: 50, r: 50, t: 60, b: 50 },
+                margin: { 
+                  l: 50, 
+                  r: 50, 
+                  t: 60, 
+                  b: 80  // Increased bottom margin to ensure x-label is visible above status bar
+                },
                 xaxis: {
                   title: {
-                    text: 'X Axis',
+                    text: plotImprovements?.xAxisLabel || 'X Axis',
                     font: {
-                      family: 'Computer Modern, serif',
-                      size: 16
-                    }
+                      family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                      size: plotImprovements?.fontSize || 16
+                    },
+                    standoff: 15  // Add standoff to ensure better spacing for the x-axis title
                   },
                   showgrid: true,
                   zeroline: true,
                   tickfont: {
-                    family: 'Computer Modern, serif'
+                    family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotImprovements?.tickSize || 12
                   },
-                  ticks: 'inside'
+                  ticks: 'inside',
+                  tickwidth: plotImprovements?.tickThickness || 1
                 },
                 yaxis: {
                   title: {
-                    text: 'Y Axis',
+                    text: plotImprovements?.yAxisLabel || 'Y Axis',
                     font: {
-                      family: 'Computer Modern, serif',
-                      size: 16
+                      family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                      size: plotImprovements?.fontSize || 16
                     }
                   },
                   showgrid: true,
                   zeroline: true,
                   tickfont: {
-                    family: 'Computer Modern, serif'
+                    family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotImprovements?.tickSize || 12
                   },
-                  ticks: 'inside'
+                  ticks: 'inside',
+                  tickwidth: plotImprovements?.tickThickness || 1
                 },
                 legend: {
-                  x: 1,
-                  xanchor: 'right',
-                  y: 1,
                   font: {
-                    family: 'Computer Modern, serif'
-                  }
-                }
+                    family: plotImprovements?.useLatexFonts ? 'Computer Modern, serif' : 'Arial, sans-serif',
+                    size: plotImprovements?.legendSize || 12
+                  },
+                  x: plotImprovements?.legendPosition?.includes('right') ? 1 : 0,
+                  y: plotImprovements?.legendPosition?.includes('top') ? 1 : 0,
+                  xanchor: plotImprovements?.legendPosition?.includes('right') ? 'right' : 'left',
+                  yanchor: plotImprovements?.legendPosition?.includes('top') ? 'top' : 'bottom'
+                },
+                ...(plotImprovements?.showBorder && {
+                  plot_bgcolor: 'white',
+                  paper_bgcolor: 'white',
+                  shapes: [
+                    {
+                      type: 'rect',
+                      xref: 'paper',
+                      yref: 'paper',
+                      x0: 0,
+                      y0: 0,
+                      x1: 1,
+                      y1: 1,
+                      line: {
+                        color: 'black',
+                        width: 2
+                      },
+                      fillcolor: 'rgba(0,0,0,0)'
+                    }
+                  ]
+                })
               }}
               config={{
                 responsive: true,
@@ -783,7 +841,7 @@ const Series1DPlot: React.FC<Series1DPlotProps> = ({
               }}
               style={{ 
                 width: '100%', 
-                height: '100%',
+                height: 'calc(100% - 28px)', // Adjust height to account for status bar (24px height + 4px border)
                 position: 'absolute',
                 top: 0,
                 left: 0

@@ -1,12 +1,241 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  FormControl, 
+  InputLabel, 
+  MenuItem, 
+  Select, 
+  TextField, 
+  Slider, 
+  FormControlLabel, 
+  Switch, 
+  Grid 
+} from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import FormatPaintIcon from '@mui/icons-material/FormatPaint';
+import { styled } from '@mui/system';
 
 interface PlotControlsSidebarProps {
   activeTab: 'heatmap' | 'series1d';
   children: React.ReactNode;
 }
+
+// Define interface for PlotImprovements settings
+export interface PlotImprovementsSettings {
+  titleText: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  fontSize: number;
+  tickSize: number;
+  tickThickness: number;
+  legendSize: number;
+  legendPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  showBorder: boolean;
+  useLatexFonts: boolean;
+}
+
+// Default settings for plot improvements
+export const defaultPlotImprovements: PlotImprovementsSettings = {
+  titleText: '',
+  xAxisLabel: '',
+  yAxisLabel: '',
+  fontSize: 14,
+  tickSize: 12,
+  tickThickness: 1,
+  legendSize: 12,
+  legendPosition: 'top-right',
+  showBorder: false,
+  useLatexFonts: true
+};
+
+// Styled slider container similar to what's used in other components
+const SliderContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: '8px',
+  marginBottom: '8px'
+}));
+
+const SliderLabel = styled(Typography)(({ theme }) => ({
+  width: '120px',
+  fontSize: '14px'
+}));
+
+const SliderValue = styled(Typography)(({ theme }) => ({
+  width: '40px',
+  textAlign: 'center',
+  marginLeft: '8px',
+  fontSize: '14px',
+  fontFamily: 'monospace',
+  backgroundColor: '#f3f2f1',
+  padding: '2px 4px',
+  borderRadius: '4px'
+}));
+
+// Plot Improvements component
+export const PlotImprovements: React.FC<{
+  settings: PlotImprovementsSettings;
+  onSettingsChange: (settings: PlotImprovementsSettings) => void;
+}> = ({ settings, onSettingsChange }) => {
+  
+  const handleChange = (key: keyof PlotImprovementsSettings, value: any) => {
+    onSettingsChange({
+      ...settings,
+      [key]: value
+    });
+  };
+
+  return (
+    <Box sx={{ mt: 1 }}>
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <TextField
+          label="Plot Title"
+          size="small"
+          value={settings.titleText}
+          onChange={(e) => handleChange('titleText', e.target.value)}
+          placeholder="Enter custom plot title"
+        />
+      </FormControl>
+
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={6}>
+          <FormControl fullWidth>
+            <TextField
+              label="X-Axis Label"
+              size="small"
+              value={settings.xAxisLabel}
+              onChange={(e) => handleChange('xAxisLabel', e.target.value)}
+              placeholder="X Axis"
+            />
+          </FormControl>
+        </Grid>
+        <Grid item xs={6}>
+          <FormControl fullWidth>
+            <TextField
+              label="Y-Axis Label"
+              size="small"
+              value={settings.yAxisLabel}
+              onChange={(e) => handleChange('yAxisLabel', e.target.value)}
+              placeholder="Y Axis"
+            />
+          </FormControl>
+        </Grid>
+      </Grid>
+
+      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+        Font & Size Settings
+      </Typography>
+
+      <SliderContainer>
+        <SliderLabel>Text Font Size:</SliderLabel>
+        <Slider
+          size="small"
+          min={8}
+          max={24}
+          step={1}
+          value={settings.fontSize}
+          onChange={(_, value) => handleChange('fontSize', value as number)}
+          sx={{ mx: 1, flex: 1 }}
+        />
+        <SliderValue>{settings.fontSize}px</SliderValue>
+      </SliderContainer>
+
+      <SliderContainer>
+        <SliderLabel>Tick Size:</SliderLabel>
+        <Slider
+          size="small"
+          min={8}
+          max={20}
+          step={1}
+          value={settings.tickSize}
+          onChange={(_, value) => handleChange('tickSize', value as number)}
+          sx={{ mx: 1, flex: 1 }}
+        />
+        <SliderValue>{settings.tickSize}px</SliderValue>
+      </SliderContainer>
+
+      <SliderContainer>
+        <SliderLabel>Tick Thickness:</SliderLabel>
+        <Slider
+          size="small"
+          min={0.5}
+          max={3}
+          step={0.5}
+          value={settings.tickThickness}
+          onChange={(_, value) => handleChange('tickThickness', value as number)}
+          sx={{ mx: 1, flex: 1 }}
+        />
+        <SliderValue>{settings.tickThickness}</SliderValue>
+      </SliderContainer>
+
+      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+        Legend Settings
+      </Typography>
+
+      <SliderContainer>
+        <SliderLabel>Legend Font Size:</SliderLabel>
+        <Slider
+          size="small"
+          min={8}
+          max={20}
+          step={1}
+          value={settings.legendSize}
+          onChange={(_, value) => handleChange('legendSize', value as number)}
+          sx={{ mx: 1, flex: 1 }}
+        />
+        <SliderValue>{settings.legendSize}px</SliderValue>
+      </SliderContainer>
+
+      <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
+        <InputLabel id="legend-position-label">Legend Position</InputLabel>
+        <Select
+          labelId="legend-position-label"
+          size="small"
+          value={settings.legendPosition}
+          label="Legend Position"
+          onChange={(e) => handleChange('legendPosition', e.target.value)}
+        >
+          <MenuItem value="top-left">Top Left</MenuItem>
+          <MenuItem value="top-right">Top Right</MenuItem>
+          <MenuItem value="bottom-left">Bottom Left</MenuItem>
+          <MenuItem value="bottom-right">Bottom Right</MenuItem>
+        </Select>
+      </FormControl>
+
+      <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+        Appearance
+      </Typography>
+
+      <Box sx={{ mt: 1 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={settings.showBorder}
+              onChange={(e) => handleChange('showBorder', e.target.checked)}
+              size="small"
+            />
+          }
+          label="Show Border around Plot"
+        />
+      </Box>
+
+      <Box sx={{ mt: 1 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={settings.useLatexFonts}
+              onChange={(e) => handleChange('useLatexFonts', e.target.checked)}
+              size="small"
+            />
+          }
+          label="Use LaTeX-style Fonts"
+        />
+      </Box>
+    </Box>
+  );
+};
 
 const PlotControlsSidebar: React.FC<PlotControlsSidebarProps> = ({ activeTab, children }) => {
   return (
