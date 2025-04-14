@@ -184,12 +184,12 @@ const HomePage: React.FC = () => {
     return `${selectedDataset.path} ${shape}`;
   };
 
-  const navbarHeight = '80px';
+  const navbarHeight = '60px';
   const sidebarWidth = '300px';
-  const statusBarHeight = '40px';
+  const statusBarHeight = '24px'; // Reduced to match our new status bar height
 
   return (
-    <div className="govuk-template__body">
+    <div className="govuk-template__body" style={{ width: '100vw', maxWidth: '100%', padding: 0, margin: 0, overflow: 'hidden' }}>
       <AppNavbar 
         title="HDF5 Heatmap Viewer" 
         onFileUpload={() => setUploadDialogOpen(true)} 
@@ -208,27 +208,38 @@ const HomePage: React.FC = () => {
         }}
       >
         <Fade in={uploadDialogOpen}>
-          <div className="govuk-width-container govuk-!-padding-4">
+          <div className="govuk-!-padding-4">
             <FileUploader onFileUploaded={handleFileUploaded} />
           </div>
         </Fade>
       </Dialog>
       
-      <div className="govuk-width-container">
-        <main className="govuk-main-wrapper" style={{ padding: 0 }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '100%', 
+        margin: 0, 
+        height: `calc(100vh - ${navbarHeight} - ${statusBarHeight})`, // Adjusted to include both navbar and statusbar
+        position: 'absolute',
+        top: navbarHeight,
+        bottom: statusBarHeight
+      }}>
+        <main style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div className="app-pane app-pane--enabled" style={{ 
             display: 'flex',
-            height: `calc(100vh - ${navbarHeight} - ${statusBarHeight})`,
-            marginTop: navbarHeight,
-            marginBottom: statusBarHeight
+            height: '100%',
+            width: '100%',
+            maxWidth: '100%',
+            borderTop: '2px solid #0b0c0c' // Strong black border at the top of the entire content area
           }}>
             <div 
-              className="app-pane__side-bar govuk-!-padding-2" 
+              className="app-pane__side-bar" 
               style={{
                 width: sidebarWidth,
-                borderRight: '1px solid #b1b4b6',
+                borderRight: '2px solid #0b0c0c', // Strong black border
                 overflow: 'auto',
-                backgroundColor: '#f3f2f1'
+                backgroundColor: '#f3f2f1',
+                height: '100%',
+                padding: '15px' // Added padding
               }}
             >
               <PlotControlsSidebar activeTab={activeTab}>
@@ -237,7 +248,7 @@ const HomePage: React.FC = () => {
             </div>
             
             <div 
-              className="app-pane__content govuk-!-padding-4" 
+              className="app-pane__content" 
               style={{
                 flex: 1,
                 overflow: 'auto',
@@ -245,11 +256,13 @@ const HomePage: React.FC = () => {
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                borderLeft: '2px solid #0b0c0c', // Strong black border
+                borderRight: '2px solid #0b0c0c', // Strong black border
+                padding: '10px' // Added minimal padding to ensure plot doesn't touch edges
               }}
             >
               <div 
-                className="govuk-!-margin-bottom-0"
                 style={{ 
                   width: '100%',
                   height: '100%',
@@ -260,18 +273,20 @@ const HomePage: React.FC = () => {
                 }}
               >
                 {file ? (
-                  <div style={{ height: '100%', flex: 1 }}>
+                  <div style={{ height: '100%', flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'stretch' }}>
                     {activeTab === 'heatmap' && (
                       selectedDataset && selectedDataset.shape && selectedDataset.shape.length >= 2 ? (
-                        <HeatmapPlot 
-                          filePath={file.path} 
-                          dataset={selectedDataset}
-                          allDatasets={file.structure}
-                          setStatus={setStatus}
-                          controlsOnly={false}
-                          plotSettings={heatmapSettings}
-                          setPlotSettings={setHeatmapSettings}
-                        />
+                        <div style={{ width: '100%', height: '100%', padding: '5px' }}>
+                          <HeatmapPlot 
+                            filePath={file.path} 
+                            dataset={selectedDataset}
+                            allDatasets={file.structure}
+                            setStatus={setStatus}
+                            controlsOnly={false}
+                            plotSettings={heatmapSettings}
+                            setPlotSettings={setHeatmapSettings}
+                          />
+                        </div>
                       ) : (
                         <div className="govuk-!-padding-6 govuk-!-margin-top-9 govuk-!-text-align-center">
                           <h2 className="govuk-heading-m">No 2D+ Dataset Selected</h2>
@@ -283,20 +298,22 @@ const HomePage: React.FC = () => {
                     )}
                     
                     {activeTab === 'series1d' && (
-                      <Series1DPlot
-                        filePath={file.path}
-                        allDatasets={file.structure}
-                        selectedDataset={selectedDataset}
-                        setStatus={setStatus}
-                        controlsOnly={false}
-                        seriesSettings={seriesSettings}
-                        setSeriesSettings={setSeriesSettings}
-                        showNDimOptions={showNDimOptions}
-                        sliceAxis={sliceAxis}
-                        setSliceAxis={setSliceAxis}
-                        sliceSettings={sliceSettings}
-                        setSliceSettings={setSliceSettings}
-                      />
+                      <div style={{ width: '100%', height: '100%', padding: '5px' }}>
+                        <Series1DPlot
+                          filePath={file.path}
+                          allDatasets={file.structure}
+                          selectedDataset={selectedDataset}
+                          setStatus={setStatus}
+                          controlsOnly={false}
+                          seriesSettings={seriesSettings}
+                          setSeriesSettings={setSeriesSettings}
+                          showNDimOptions={showNDimOptions}
+                          sliceAxis={sliceAxis}
+                          setSliceAxis={setSliceAxis}
+                          sliceSettings={sliceSettings}
+                          setSliceSettings={setSliceSettings}
+                        />
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -308,12 +325,14 @@ const HomePage: React.FC = () => {
             </div>
             
             <div 
-              className="app-pane__side-bar govuk-!-padding-2" 
+              className="app-pane__side-bar" 
               style={{
                 width: sidebarWidth,
-                borderLeft: '1px solid #b1b4b6',
+                borderLeft: '2px solid #0b0c0c', // Strong black border
                 overflow: 'auto',
-                backgroundColor: '#f3f2f1'
+                backgroundColor: '#f3f2f1',
+                height: '100%',
+                padding: '15px' // Added padding
               }}
             >
               <PlotTypeSidebar 

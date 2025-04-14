@@ -80,9 +80,36 @@ const DatasetList: React.FC<DatasetListProps> = ({
                 style={{ 
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  borderLeft: isSelected(dataset) ? '4px solid #1d70b8' : '4px solid transparent' 
+                  borderLeft: isSelected(dataset) ? '4px solid #1d70b8' : '4px solid transparent',
+                  transition: 'all 0.2s ease',
+                  outline: '2px solid transparent',
+                  outlineOffset: '-2px',
                 }}
                 onClick={() => onSelectDataset(dataset)}
+                onMouseOver={(e) => {
+                  if (!isSelected(dataset)) {
+                    e.currentTarget.style.backgroundColor = '#ffdd00'; // GOV.UK yellow on hover
+                    e.currentTarget.style.outline = '2px solid #0b0c0c'; // Black outline on hover
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isSelected(dataset)) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.outline = '2px solid transparent';
+                  }
+                }}
+                onFocus={(e) => {
+                  if (!isSelected(dataset)) {
+                    e.currentTarget.style.backgroundColor = '#ffdd00';
+                    e.currentTarget.style.outline = '2px solid #0b0c0c';
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!isSelected(dataset)) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.outline = '2px solid transparent';
+                  }
+                }}
               >
                 <div className="govuk-grid-row">
                   <div className="govuk-grid-column-three-quarters">
